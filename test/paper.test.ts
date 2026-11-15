@@ -194,6 +194,105 @@ describe("extractPaper (Muse Glimmer fixture)", () => {
   });
 });
 
+describe("HTML sanitization (XSS regression)", () => {
+  function tinyPaper(body: string): string {
+    return `<!doctype html><html><head><title>Untrusted Paper - arXiv</title></head><body>${body}</body></html>`;
+  }
+
+  it("does not re-parse escaped link text as markup", () => {
+    const paper = extractPaper(
+      tinyPaper(
+        `<p>Before text <a href="#A1">&lt;img src=x onerror="alert(1)"&gt;</a> after text.</p>`,
+      ),
+      "2401.00001",
+    );
+    const html = paper.paragraphs[0].html;
+    expect(html).not.toMatch(/<img/i);
+    expect(html).toContain("&lt;img");
+  });
+
+  it("drops javascript:/data: hrefs but keeps the link text", () => {
+    const paper = extractPaper(
+      tinyPaper(
+        `<p>See <a href="javascript:alert(1)">this citation</a> and ` +
+          `<a href="data:text/html;base64,PHNjcmlwdD4=">that one</a> for details.</p>`,
+      ),
+      "2401.00002",
+    );
+    const html = paper.paragraphs[0].html;
+    expect(html).not.toMatch(/javascript:/i);
+    expect(html).not.toMatch(/data:/i);
+    expect(html).toContain("this citation");
+    expect(html).toContain("that one");
+  });
+
+  it("keeps safe external links while stripping event handlers", () => {
+    const paper = extractPaper(
+      tinyPaper(
+        `<p>Read <a href="https://example.com/paper" onclick="alert(1)" title="t">the source</a> online.</p>`,
+      ),
+      "2401.00003",
+    );
+    const html = paper.paragraphs[0].html;
+    expect(html).toContain('href="https://example.com/paper"');
+    expect(html).not.toMatch(/onclick/i);
+  });
+
+  it("escapes footnote marks instead of interpolating them", () => {
+    const paper = extractPaper(
+      tinyPaper(
+        `<p>Statement text<span class="ltx_note" role="doc-footnote">` +
+          `<span class="ltx_note_mark">&lt;b&gt;boom&lt;/b&gt;</span>` +
+          `<span class="ltx_note_body">Note body.</span></span> continues afterward.</p>`,
+      ),
+      "2401.00004",
+    );
+    const html = paper.paragraphs[0].html;
+    expect(html).toContain('class="footnote-ref"');
+    expect(html).toContain("&lt;b&gt;boom");
+    expect(html).not.toMatch(/<b>boom/);
+  });
+
+  it("sanitizes table HTML: no scripts/handlers, layout preserved", () => {
+    const paper = extractPaper(
+      tinyPaper(
+        `<figure id="S1.T1"><figcaption>Table 1: Injected attributes.</figcaption>` +
+          `<table><tr><td colspan="2" onclick="alert(1)" style="padding-left:4pt;position:fixed;font-size:80%" onmouseover="alert(2)">` +
+          `<script>alert(3)</script><svg onload="alert(4)"></svg>` +
+          `<a href="javascript:alert(5)">bad link</a> text</td></tr></table></figure>`,
+      ),
+      "2401.00005",
+    );
+    const table = paper.figures[0];
+    expect(table.kind).toBe("table");
+    const html = table.tableHtml ?? "";
+    expect(html).toMatch(/^<table/);
+    expect(html).not.toMatch(/on(click|mouseover|error|load)/i);
+    expect(html).not.toMatch(/javascript:/i);
+    expect(html).not.toMatch(/<(img|svg|script|iframe)/i);
+    expect(html).toContain('colspan="2"');
+    expect(html).toContain("padding-left:4pt");
+    expect(html).toContain("font-size:80%");
+    expect(html).not.toContain("position");
+  });
+
+  it("strips script/img/style injection from paragraph HTML", () => {
+    const paper = extractPaper(
+      tinyPaper(
+        `<p>Plain text <script>alert(1)</script><img src=x onerror=alert(2)>` +
+          `<span style="position:fixed;inset:0">overlay text</span> end.</p>`,
+      ),
+      "2401.00006",
+    );
+    const html = paper.paragraphs[0].html;
+    expect(html).not.toMatch(/alert\(1\)/);
+    expect(html).not.toMatch(/onerror/i);
+    expect(html).not.toMatch(/position/i);
+    expect(html).not.toMatch(/<script|<img/i);
+    expect(html).toContain("overlay text");
+  });
+});
+
 describe("buildRegexFigureMap", () => {
   const para = (id: string, text: string): Paragraph => ({
     id,

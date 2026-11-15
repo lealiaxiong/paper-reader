@@ -3,9 +3,10 @@ import { redis } from "./redis";
 
 /**
  * Bump when the payload shape or extraction logic changes, so the durable
- * cache never serves stale entries across deploys.
+ * cache never serves stale entries across deploys. v2 strips unsafe HTML
+ * from everything extracted from arXiv, so v1 entries must not be reused.
  */
-const CACHE_VERSION = "v1";
+const CACHE_VERSION = "v2";
 
 const CACHE_TTL_SECONDS = 24 * 60 * 60;
 
@@ -37,8 +38,13 @@ export async function setCached(
   arxivId: string,
   data: ReaderPayload,
 ): Promise<void> {
-  memory.set(key(arxivId), data);
-  if (!redis) return;
+  // Only populate the process-local map when it is the actual cache backend;
+  // otherwise it would grow unbounded alongside Redis (and keep serving
+  // entries after a version bump in the same process).
+  if (!redis) {
+    memory.set(key(arxivId), data);
+    return;
+  }
   try {
     await redis.set(key(arxivId), data, { ex: CACHE_TTL_SECONDS });
   } catch (err) {

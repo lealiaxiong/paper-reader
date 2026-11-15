@@ -1,6 +1,96 @@
 import * as cheerio from "cheerio";
 import type { CheerioAPI } from "cheerio";
+import sanitizeHtml from "sanitize-html";
 import type { Figure, Paragraph, ReaderData, ReaderPayload } from "@/lib/types";
+
+const MAX_HTML_BYTES = 5 * 1024 * 1024;
+
+/**
+ * Allowlist for paragraph HTML. arXiv HTML is untrusted markup: it is generated
+ * from author-controlled LaTeX, so anything that can execute script or leak
+ * data must be stripped before it reaches dangerouslySetInnerHTML.
+ * No styles, no ids, no event handlers, only http(s)/mailto links.
+ */
+const PARAGRAPH_SANITIZE: sanitizeHtml.IOptions = {
+  allowedTags: ["a", "b", "i", "em", "strong", "cite", "sub", "sup", "code", "span", "br"],
+  allowedAttributes: {
+    a: ["href", "title", "target", "rel"],
+    sup: ["class"],
+  },
+  allowedClasses: { sup: ["footnote-ref"] },
+  allowedSchemes: ["http", "https", "mailto"],
+  allowProtocolRelative: false,
+};
+
+/**
+ * Allowlist for table markup (tables are rendered as raw HTML, unlike math).
+ * Keeps the structural table tags, native MathML (arXiv tables can contain
+ * formulas), and the inline styles LaTeXML uses for layout — widths, padding,
+ * font sizes — with values constrained so no script/url() can sneak in.
+ */
+const TABLE_SANITIZE: sanitizeHtml.IOptions = {
+  allowedTags: [
+    "table", "thead", "tbody", "tfoot", "tr", "th", "td", "caption", "colgroup", "col",
+    "span", "a", "b", "i", "em", "strong", "cite", "sub", "sup", "code", "br",
+    "math", "semantics", "annotation", "mrow", "mi", "mo", "mn", "ms", "mtext",
+    "mspace", "msup", "msub", "msubsup", "mfrac", "msqrt", "mroot", "mtable",
+    "mtr", "mtd", "munder", "mover", "munderover", "mphantom",
+  ],
+  allowedAttributes: {
+    table: ["style"],
+    thead: ["style"],
+    tbody: ["style"],
+    tfoot: ["style"],
+    tr: ["style"],
+    th: ["colspan", "rowspan", "scope", "style"],
+    td: ["colspan", "rowspan", "style"],
+    caption: [],
+    colgroup: ["span"],
+    col: ["span", "width"],
+    span: ["style"],
+    a: ["href", "title", "target", "rel"],
+    math: ["xmlns", "display", "alttext", "displaystyle"],
+    semantics: [],
+    annotation: ["encoding"],
+    mrow: [],
+    mi: ["mathvariant"],
+    mo: ["stretchy", "fence", "lspace", "rspace", "mathcolor", "mathsize"],
+    mn: [],
+    mtext: [],
+    mspace: ["width", "height", "depth"],
+    msup: [],
+    msub: [],
+    msubsup: [],
+    mfrac: ["linethickness"],
+    msqrt: [],
+    mroot: [],
+    mtable: ["columnalign", "rowspacing", "columnspacing"],
+    mtr: [],
+    mtd: ["columnalign", "columnspan", "rowspan"],
+    munder: [],
+    mover: [],
+    munderover: [],
+    mphantom: [],
+  },
+  allowedStyles: {
+    "*": {
+      "font-size": [/^\d+(\.\d+)?(pt|px|em|rem|%)$/],
+      "font-weight": [/^(normal|bold|[1-9]00)$/],
+      "font-style": [/^(normal|italic)$/],
+      "text-align": [/^(left|right|center|justify)$/],
+      "vertical-align": [/^(top|middle|bottom|baseline)$/],
+      "list-style-type": [/^none$/],
+      width: [/^\d+(\.\d+)?(pt|px|em|rem|%)$/],
+      padding: [/^\d+(\.\d+)?(pt|px|em|rem|%)(\s+\d+(\.\d+)?(pt|px|em|rem|%)){0,3}$/],
+      "padding-left": [/^\d+(\.\d+)?(pt|px|em|rem|%)$/],
+      "padding-right": [/^\d+(\.\d+)?(pt|px|em|rem|%)$/],
+      "padding-top": [/^\d+(\.\d+)?(pt|px|em|rem|%)$/],
+      "padding-bottom": [/^\d+(\.\d+)?(pt|px|em|rem|%)$/],
+    },
+  },
+  allowedSchemes: ["http", "https", "mailto"],
+  allowProtocolRelative: false,
+};
 
 /** Extract arXiv ID from abs/html/pdf links. Returns null if not an arXiv URL. */
 export function extractArxivId(input: string): string | null {
@@ -19,7 +109,7 @@ export function extractArxivId(input: string): string | null {
 export async function fetchArxivHtml(arxivId: string): Promise<string> {
   const url = `https://arxiv.org/html/${arxivId}`;
   const res = await fetch(url, {
-    headers: { "User-Agent": "arxiv-reader-demo/0.1 (local demo)" },
+    headers: { "User-Agent": "paper-reader/0.1 (arXiv HTML reader)" },
     signal: AbortSignal.timeout(30_000),
   });
   if (res.status === 404) {
@@ -32,7 +122,23 @@ export async function fetchArxivHtml(arxivId: string): Promise<string> {
   if (!res.ok) {
     throw new Error(`arXiv returned ${res.status} for ${arxivId}`);
   }
-  return await res.text();
+  const contentType = res.headers.get("content-type") ?? "";
+  if (contentType && !contentType.toLowerCase().includes("text/html")) {
+    throw new Error(`arXiv did not return an HTML page for ${arxivId}`);
+  }
+  const declaredLength = Number(res.headers.get("content-length") ?? "0");
+  if (declaredLength > MAX_HTML_BYTES) {
+    throw new Error(`The HTML for arXiv:${arxivId} is too large to process (over 5 MB).`);
+  }
+  const bytes = new Uint8Array(await res.arrayBuffer());
+  if (bytes.byteLength > MAX_HTML_BYTES) {
+    throw new Error(`The HTML for arXiv:${arxivId} is too large to process (over 5 MB).`);
+  }
+  const html = new TextDecoder().decode(bytes);
+  if (!html.includes("<html")) {
+    throw new Error(`Unexpected response from arXiv for ${arxivId}`);
+  }
+  return html;
 }
 
 const HTML_BASE = "https://arxiv.org/html/";
@@ -67,7 +173,9 @@ function extractParagraphHtml(
   // we remove that duplicated text and leave a clean sup marker.
   $el.find(".ltx_note").each((_i: number, nEl: unknown) => {
     const num = $(nEl as never).find(".ltx_note_mark").first().text().trim() || "";
-    $(nEl as never).replaceWith(`<sup class="footnote-ref">${num}</sup>`);
+    // Build a DOM node instead of interpolating into an HTML string: the mark
+    // text is author-controlled and must never be re-parsed as markup.
+    $(nEl as never).replaceWith($("<sup>").addClass("footnote-ref").text(num));
   });
 
   $el.find("math").each((_i: number, mathEl: unknown) => {
@@ -108,7 +216,7 @@ function extractParagraphHtml(
         $(aEl as never).attr("title", info.entry);
       } else {
         // No bib info at all — keep the citation text as plain text.
-        $(aEl as never).replaceWith(normalizeCitation($(aEl as never).text()));
+        $(aEl as never).replaceWith($("<span>").text(normalizeCitation($(aEl as never).text())));
       }
       // Normalize double commas: "Bender et al.,, 2021" → "Bender et al., 2021"
       const rawText = $(aEl as never).text();
@@ -122,11 +230,13 @@ function extractParagraphHtml(
       $(aEl as never).attr("rel", "noopener noreferrer");
     } else if (href.startsWith("#")) {
       // Other internal anchors (figures/sections): remove link, keep text.
-      $(aEl as never).replaceWith($(aEl as never).text());
+      $(aEl as never).replaceWith($("<span>").text($(aEl as never).text()));
     }
   });
 
   let html = $el.html() as string;
+  // Final gate: allowlist-sanitize everything that will be injected as raw HTML.
+  html = sanitizeHtml(html, PARAGRAPH_SANITIZE);
   html = html.replace(/\s+/g, " ").trim();
   return { html, mathTex };
 }
@@ -292,7 +402,7 @@ export function extractPaper(html: string, arxivId: string): ReaderData {
       const $lean = $table.clone();
       $lean.find("*").removeAttr("class").removeAttr("id");
       $lean.removeAttr("class").removeAttr("id");
-      tableHtml = $.html($lean);
+      tableHtml = sanitizeHtml($.html($lean), TABLE_SANITIZE);
     }
 
     // Normalize key: container (S3.T2) and its panel (S3.T2.fig1) share a
@@ -399,10 +509,11 @@ export async function buildFigureExplanations(
 ): Promise<Record<string, string>> {
   if (figures.length === 0) return {};
 
-  // Feature flag: set ENABLE_EXPLANATIONS=false to deploy without LLM captions
-  // (no OpenRouter calls — the app then runs entirely on deterministic code).
-  if (process.env.ENABLE_EXPLANATIONS === "false") {
-    console.log("Explanations disabled (ENABLE_EXPLANATIONS=false)");
+  // Feature flag (fail-closed): explanations run only when explicitly enabled
+  // AND a key is configured. This keeps a misconfigured deploy from silently
+  // becoming an open proxy to a paid model.
+  if (process.env.ENABLE_EXPLANATIONS !== "true") {
+    console.log("Explanations disabled (set ENABLE_EXPLANATIONS=true to enable)");
     return {};
   }
 
