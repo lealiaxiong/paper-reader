@@ -59,6 +59,7 @@ All optional — without any of them the app runs fully deterministically with a
 | `OPENROUTER_API_KEY` | Enables the "In short:" figure explanations |
 | `ENABLE_EXPLANATIONS` | Set to `false` to disable explanations even when a key is present |
 | `KV_REST_API_URL` / `KV_REST_API_TOKEN` | Upstash Redis shared cache (also accepts `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`) |
+| `STATS_TOKEN` | Bearer token that protects `GET /api/stats` |
 
 ## Deployment
 
@@ -67,6 +68,18 @@ Deployed on Vercel (Hobby plan). `src/app/api/fetch/route.ts` exports `maxDurati
 1. Import the repository into Vercel.
 2. Optional: **Storage → Marketplace → Upstash Redis** (free tier) to enable the shared cache; the integration injects `KV_REST_API_URL` / `KV_REST_API_TOKEN`.
 3. Optional: set `OPENROUTER_API_KEY` for explanations, or `ENABLE_EXPLANATIONS=false` to keep the deployment deterministic.
+
+## Analytics
+
+- **Visitors** — Vercel Web Analytics (`@vercel/analytics`, mounted in `src/app/layout.tsx`). Enable it once in the Vercel dashboard under **Analytics**. Hobby includes 50,000 events/month with a 1-month window; custom events require Pro, so this covers page views/visitors/referrers only.
+- **Paper loads** — Redis counters written by `/api/fetch` on production deployments only (previews and local dev are excluded): daily totals (`stats:loads:<date>`), per-paper totals (`stats:papers` hash), cache hit/miss totals, and an error count. Read them with:
+
+```bash
+curl -H "Authorization: Bearer $STATS_TOKEN" \
+  "https://paper-reader-omega.vercel.app/api/stats?days=14"
+```
+
+The response includes `loadsByDay`, `totalLoads`, `cache.hitRate`, `errors`, and the 20 most-loaded papers.
 
 ## Scripts
 
@@ -90,6 +103,7 @@ Deployed on Vercel (Hobby plan). `src/app/api/fetch/route.ts` exports `maxDurati
 - **Cheerio** — server-side HTML parsing
 - **KaTeX** — math rendering
 - **Upstash Redis** — shared deployment cache (optional)
+- **Vercel Web Analytics** — visitor analytics
 - **OpenRouter** (`meta/muse-ember`) — figure explanations (optional)
 
 ## Known limitations

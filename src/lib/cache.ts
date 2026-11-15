@@ -1,5 +1,5 @@
-import { Redis } from "@upstash/redis";
 import type { ReaderPayload } from "./types";
+import { redis } from "./redis";
 
 /**
  * Bump when the payload shape or extraction logic changes, so the durable
@@ -8,18 +8,6 @@ import type { ReaderPayload } from "./types";
 const CACHE_VERSION = "v1";
 
 const CACHE_TTL_SECONDS = 24 * 60 * 60;
-
-/**
- * Upstash integration env names differ by provisioning path (own Upstash
- * project vs Vercel Marketplace), so accept both.
- */
-const redisUrl =
-  process.env.UPSTASH_REDIS_REST_URL ?? process.env.KV_REST_API_URL;
-const redisToken =
-  process.env.UPSTASH_REDIS_REST_TOKEN ?? process.env.KV_REST_API_TOKEN;
-
-const redis =
-  redisUrl && redisToken ? new Redis({ url: redisUrl, token: redisToken }) : null;
 
 /** Per-instance fallback when Redis is not configured (local dev, tests). */
 const memory = new Map<string, ReaderPayload>();

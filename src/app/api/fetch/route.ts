@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCached, setCached } from "@/lib/cache";
 import { extractArxivId, fetchArxivHtml, processPaper, toClientPayload } from "@/lib/paper";
+import { recordError, recordPaperLoad } from "@/lib/stats";
 
 // Allow up to 60s for OpenRouter explanation batches (Vercel Hobby caps at
 // 10s by default; this export extends it — see vercel.json maxDuration).
@@ -24,14 +25,19 @@ export async function POST(req: NextRequest) {
   }
 
   const cached = await getCached(arxivId);
-  if (cached) return NextResponse.json({ data: cached, cached: true });
+  if (cached) {
+    await recordPaperLoad(arxivId, true);
+    return NextResponse.json({ data: cached, cached: true });
+  }
 
   try {
     const html = await fetchArxivHtml(arxivId);
     const data = toClientPayload(await processPaper(arxivId, html));
     await setCached(arxivId, data);
+    await recordPaperLoad(arxivId, false);
     return NextResponse.json({ data, cached: false });
   } catch (err) {
+    await recordError();
     const message = err instanceof Error ? err.message : "Unexpected error";
     return NextResponse.json({ error: message }, { status: 502 });
   }
