@@ -22,13 +22,25 @@ type Props = {
  */
 export default function FigureSidebar({ data, activeParaId, activeFigureIds }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  // Carousel state: index within the active paragraph's figure list.
-  // Reset to 0 whenever the active paragraph changes.
-  const [carouselIndex, setCarouselIndex] = useState(0);
+  // Carousel state: index within the active paragraph's figure list, together
+  // with the paragraph it belongs to. Changing paragraphs derives index 0 on
+  // the next render — no effect/reset pass needed.
+  const [carousel, setCarousel] = useState<{
+    paraId: string | null;
+    index: number;
+  }>({ paraId: activeParaId, index: 0 });
 
-  useEffect(() => {
-    setCarouselIndex(0);
-  }, [activeParaId]);
+  const carouselIndex = carousel.paraId === activeParaId ? carousel.index : 0;
+
+  const setCarouselIndex = (next: number | ((index: number) => number)) => {
+    setCarousel((c) => {
+      const base = c.paraId === activeParaId ? c.index : 0;
+      return {
+        paraId: activeParaId,
+        index: typeof next === "function" ? next(base) : next,
+      };
+    });
+  };
 
   // Ordered list of figures cited by the active paragraph (in reading order,
   // as returned by the regex map). Empty when the paragraph cites nothing.
