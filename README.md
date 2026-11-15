@@ -14,7 +14,7 @@ Paste (or drag-and-drop) any arXiv link. The paper renders at reading width; as 
 - **Clean citations, no bibliography jumps.** `#bib.*` links are resolved to the real source: arXiv ID → `arxiv.org/abs/…`, DOI → `doi.org/…`, otherwise a short-query Google Scholar search. The full bibliography entry shows as a tooltip; double-comma artifacts (`"Bender et al.,, 2021"`) are normalized.
 - **Footnote cleanup.** arXiv HTML embeds full footnote text inside body paragraphs; the extractor strips it down to a superscript marker so the note doesn't duplicate in the text.
 - **Panel merging.** Tables/figures split across multiple `<figure>` elements (container + panel) are merged into one card. Figure N and Table N are never conflated — papers number them independently.
-- **Caching.** Shared through Upstash Redis when configured (24h TTL, versioned keys so extraction changes never serve stale payloads), with an in-memory fallback for local dev. Keyed by arXiv ID, so `abs/`, `html/`, and `pdf/` links for the same paper share one entry.
+- **Caching.** On Vercel, shared through Upstash Redis (24h TTL, versioned keys so extraction changes never serve stale payloads). Local dev uses an in-memory cache instead: Vercel-injected `KV_*` credentials are only honored on Vercel, so dev and prod never share a database. Keyed by arXiv ID, so `abs/`, `html/`, and `pdf/` links for the same paper share one entry.
 - **Abuse protections.** Input validation, arXiv fetch size/type caps (5 MB), per-IP rate limiting (20 requests/minute via Upstash, when Redis is configured), and single-flight deduplication of concurrent requests for the same paper.
 - **Sanitized paper HTML.** All text and table markup extracted from arXiv is allowlist-sanitized before it reaches the browser — no scripts, event handlers, `javascript:` URLs, or arbitrary styles.
 - **Anonymous, single-use.** No accounts or history — paste a link, read, close.
@@ -60,7 +60,8 @@ All optional — without any of them the app runs fully deterministically with a
 |---|---|
 | `OPENROUTER_API_KEY` | Enables the "In short:" figure explanations |
 | `ENABLE_EXPLANATIONS` | Set to `true` (with `OPENROUTER_API_KEY`) to enable explanations; any other value disables them |
-| `KV_REST_API_URL` / `KV_REST_API_TOKEN` | Upstash Redis shared cache (also accepts `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`) |
+| `KV_REST_API_URL` / `KV_REST_API_TOKEN` | Injected by the Vercel Marketplace Upstash integration; ignored outside Vercel so local dev never shares the production database |
+| `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | Optional: separate Upstash database for local dev (takes precedence over `KV_*` everywhere) |
 | `STATS_TOKEN` | Bearer token that protects `GET /api/stats` |
 
 ## Deployment
