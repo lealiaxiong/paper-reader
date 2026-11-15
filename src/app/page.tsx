@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useState } from "react";
-import type { ReaderData } from "@/lib/types";
+import type { ReaderPayload } from "@/lib/types";
 import UrlBar from "@/components/UrlBar";
 import ReaderBody from "@/components/ReaderBody";
 import FigureSidebar from "@/components/FigureSidebar";
@@ -11,7 +11,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cached, setCached] = useState<boolean | null>(null);
-  const [data, setData] = useState<ReaderData | null>(null);
+  const [data, setData] = useState<ReaderPayload | null>(null);
   const [activeParaId, setActiveParaId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -34,7 +34,7 @@ export default function Home() {
         setData(null);
         return;
       }
-      const next: ReaderData = json.data;
+      const next: ReaderPayload = json.data;
       setData(next);
       setCached(json.cached ?? false);
       setActiveParaId(null);

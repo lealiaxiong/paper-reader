@@ -35,3 +35,11 @@ export interface ReaderData {
   /** paraId -> [figureId, ...] */
   paraFigureMap: Record<string, string[]>;
 }
+
+/**
+ * Client-facing paper data. `Paragraph.text` is only needed server-side (regex
+ * mapping + explanations), so it is stripped before caching/responding.
+ */
+export interface ReaderPayload extends Omit<ReaderData, "paragraphs"> {
+  paragraphs: Omit<Paragraph, "text">[];
+}

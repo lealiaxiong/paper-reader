@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { ReaderData } from "@/lib/types";
+import type { ReaderPayload } from "@/lib/types";
 import FigureCard from "./FigureCard";
 
 type Props = {
-  data: ReaderData;
+  data: ReaderPayload;
   activeParaId: string | null;
   activeFigureIds: Set<string>;
 };

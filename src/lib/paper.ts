@@ -1,5 +1,5 @@
 import * as cheerio from "cheerio";
-import type { Figure, Paragraph, ReaderData } from "@/lib/types";
+import type { Figure, Paragraph, ReaderData, ReaderPayload } from "@/lib/types";
 
 /** Extract arXiv ID from abs/html/pdf links. Returns null if not an arXiv URL. */
 export function extractArxivId(input: string): string | null {
@@ -284,7 +284,16 @@ export function extractPaper(html: string, arxivId: string): ReaderData {
       $f.find("img[src]").first().attr("src");
 
     const $table = $f.find("table").first();
-    const tableHtml = !raw && $table.length ? $.html($table.get(0)) : null;
+    let tableHtml: string | null = null;
+    if (!raw && $table.length) {
+      // Ship lean markup: our viewer styles tables with CSS, so LaTeXML's
+      // class/id attributes (~55% of table bytes) are dead weight. Inline
+      // style attributes stay for fidelity (colspan/rowspan are kept).
+      const $lean = $table.clone();
+      $lean.find("*").removeAttr("class").removeAttr("id");
+      $lean.removeAttr("class").removeAttr("id");
+      tableHtml = $.html($lean);
+    }
 
     // Normalize key: container (S3.T2) and its panel (S3.T2.fig1) share a
     // logical figure/table — merge by the shortest id prefix among siblings.
@@ -525,4 +534,20 @@ export async function processPaper(arxivId: string, html: string): Promise<Reade
   }
 
   return paper;
+}
+
+/**
+ * Strip server-only fields before caching/responding. Paragraph plain text is
+ * only used by regex mapping and explanations; the client renders `html`.
+ * On 2203.02155 this drops ~95KB of the ~619KB payload.
+ */
+export function toClientPayload(paper: ReaderData): ReaderPayload {
+  return {
+    ...paper,
+    paragraphs: paper.paragraphs.map((p) => ({
+      id: p.id,
+      html: p.html,
+      mathTex: p.mathTex,
+    })),
+  };
 }

@@ -3,10 +3,10 @@
 import { useEffect, useRef } from "react";
 import katex from "katex";
 import "katex/dist/katex.min.css";
-import type { ReaderData } from "@/lib/types";
+import type { ReaderPayload } from "@/lib/types";
 
 type Props = {
-  data: ReaderData;
+  data: ReaderPayload;
   activeParaId: string | null;
   onActiveParaChange: (id: string | null) => void;
 };
