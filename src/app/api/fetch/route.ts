@@ -23,13 +23,13 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const cached = getCached(arxivId);
+  const cached = await getCached(arxivId);
   if (cached) return NextResponse.json({ data: cached, cached: true });
 
   try {
     const html = await fetchArxivHtml(arxivId);
     const data = toClientPayload(await processPaper(arxivId, html));
-    setCached(arxivId, data);
+    await setCached(arxivId, data);
     return NextResponse.json({ data, cached: false });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unexpected error";
