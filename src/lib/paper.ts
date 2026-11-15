@@ -1,4 +1,5 @@
 import * as cheerio from "cheerio";
+import type { CheerioAPI } from "cheerio";
 import type { Figure, Paragraph, ReaderData, ReaderPayload } from "@/lib/types";
 
 /** Extract arXiv ID from abs/html/pdf links. Returns null if not an arXiv URL. */
@@ -52,9 +53,8 @@ function resolveImageUrl(raw: string | undefined): string | null {
  * (#bib.*) to external sources, keep <a> links, strip other inline tags.
  * The frontend renders KaTeX for @@K{n}@@ segments.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function extractParagraphHtml(
-  $: any,
+  $: CheerioAPI,
   el: unknown,
   // bibId -> { url: external URL | full entry text } for citation resolution
   bibExternal: Map<string, { url: string | null; entry: string }>,

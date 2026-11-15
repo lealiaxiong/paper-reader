@@ -57,6 +57,11 @@ Open [http://localhost:3000](http://localhost:3000) and paste an arXiv link, e.g
 | `npm run build` | Production build |
 | `npm run start` | Serve the production build |
 | `npm run lint` | Run ESLint |
+| `npm test` | Run the scraper test suite (Vitest) |
+
+## Testing
+
+`npm test` runs Vitest against pinned arXiv HTML fixtures in `test/fixtures/` (gzipped, no network access). The suite covers arXiv ID parsing, extraction (paragraphs, authors, figures, tables, math, citation links, footnote stripping), regex figure mapping, table HTML compaction, and client payload trimming. To refresh a fixture, download the pinned arXiv HTML version and gzip it, then update any counts that changed intentionally.
 
 ## Tech stack
 
@@ -68,6 +73,6 @@ Open [http://localhost:3000](http://localhost:3000) and paste an arXiv link, e.g
 
 ## Known limitations
 
-- **In-memory cache** clears on server restart; repeat links re-fetch after a restart.
+- **Cache** is shared through Upstash Redis in deployment (24h TTL, versioned keys). Locally it falls back to an in-memory Map that clears on server restart.
 - **Papers without an arXiv HTML version** return a 404. This happens with very new submissions (arXiv generates HTML asynchronously) and some older papers. PDF fallback is not implemented.
 - **Tables render inline as HTML**, not as images — that's by design (there's often no image file in the source), but very wide tables scroll inside their card.
