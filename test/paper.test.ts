@@ -39,6 +39,16 @@ function mg(): ReaderData {
   ));
 }
 
+let attention: ReaderData | undefined;
+function attentionPaper(): ReaderData {
+  // 1706.03762v7 — Attention Is All You Need. Featured example on the landing
+  // page; author names contain nested footnote marks that must not leak.
+  return (attention ??= extractPaper(
+    loadFixture("1706.03762v7.html.gz"),
+    "1706.03762",
+  ));
+}
+
 describe("extractArxivId", () => {
   it("extracts IDs from abs/html/pdf/export URLs", () => {
     expect(extractArxivId("https://arxiv.org/abs/2401.12345")).toBe("2401.12345");
@@ -290,6 +300,37 @@ describe("HTML sanitization (XSS regression)", () => {
     expect(html).not.toMatch(/position/i);
     expect(html).not.toMatch(/<script|<img/i);
     expect(html).toContain("overlay text");
+  });
+});
+
+describe("extractPaper (Attention fixture)", () => {
+  it("strips nested footnote marks from author names", () => {
+    const paper = attentionPaper();
+    expect(paper.title).toBe("Attention Is All You Need");
+    expect(paper.authors).toEqual([
+      "Ashish Vaswani",
+      "Noam Shazeer",
+      "Niki Parmar",
+      "Jakob Uszkoreit",
+      "Llion Jones",
+      "Aidan N. Gomez",
+      "Łukasz Kaiser",
+      "Illia Polosukhin",
+    ]);
+    for (const author of paper.authors) {
+      expect(author).not.toMatch(/footnote|mark:/i);
+    }
+  });
+
+  it("extracts paragraphs, figures, and tables", () => {
+    const paper = attentionPaper();
+    expect(paper.paragraphs).toHaveLength(65);
+    expect(paper.figures).toHaveLength(9);
+    expect(paper.figures.filter((f) => f.imageUrl)).toHaveLength(5);
+    expect(paper.figures.filter((f) => f.tableHtml)).toHaveLength(4);
+    expect(
+      Object.keys(buildRegexFigureMap(paper.paragraphs, paper.figures)),
+    ).toHaveLength(13);
   });
 });
 

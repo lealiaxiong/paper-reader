@@ -300,9 +300,13 @@ export function extractPaper(html: string, arxivId: string): ReaderData {
   const title = (rawTitle.replace(/\s*[-–—]\s*arXiv.*$/i, "") || `arXiv:${arxivId}`).trim();
 
   // --- Authors: .ltx_personname elements in the title block ---
+  // Footnote/affiliation notes (e.g. "11footnotemark: 1") are nested inside
+  // author names; remove them before reading the text.
   const authors: string[] = [];
   $(".ltx_personname").each((_i: number, el: unknown) => {
-    const name = $(el as never)
+    const $name = $(el as never).clone();
+    $name.find(".ltx_note").remove();
+    const name = $name
       .text()
       .replace(/\s+/g, " ")
       .replace(/[*†]+\s*$/, "") // strip footnote marks (e.g. "Jeff Wu*")
@@ -311,8 +315,9 @@ export function extractPaper(html: string, arxivId: string): ReaderData {
   });
   // Fallback: concatenated .ltx_authors block (strip thanks notes)
   if (authors.length === 0) {
-    const block = $(".ltx_authors")
-      .first()
+    const $block = $(".ltx_authors").first().clone();
+    $block.find(".ltx_note").remove();
+    const block = $block
       .text()
       .replace(/\s+/g, " ")
       .replace(/thanks:.*?(\.\s|$)/gi, "")
