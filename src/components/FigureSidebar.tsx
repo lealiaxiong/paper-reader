@@ -55,7 +55,13 @@ export default function FigureSidebar({ data, activeParaId, activeFigureIds }: P
   const onNext = () => setCarouselIndex((i) => Math.min(carouselTotal - 1, i + 1));
 
   useEffect(() => {
+    // Scroll-sync only makes sense in the desktop side-by-side layout;
+    // on mobile the sidebar stacks below the article. Checked on every
+    // tick so rotating/resizing across the breakpoint behaves too.
+    const mq = window.matchMedia("(min-width: 1024px)");
+
     const sync = () => {
+      if (!mq.matches) return;
       const container = scrollRef.current;
       if (!container) return;
 
@@ -101,21 +107,21 @@ export default function FigureSidebar({ data, activeParaId, activeFigureIds }: P
 
   if (data.figures.length === 0) {
     return (
-      <aside className="w-80 shrink-0 p-4 text-sm text-zinc-500">
+      <aside className="w-full border-t border-zinc-200 p-4 text-sm text-zinc-500 lg:w-80 lg:shrink-0 lg:border-t-0">
         No figures detected in this paper.
       </aside>
     );
   }
 
   return (
-    <aside className="w-80 shrink-0 p-4">
-      <div className="sticky top-[4.5rem] flex max-h-[calc(100vh-5.5rem)] flex-col">
+    <aside className="w-full border-t border-zinc-200 p-4 lg:w-80 lg:shrink-0 lg:border-t-0">
+      <div className="flex flex-col lg:sticky lg:top-[4.5rem] lg:max-h-[calc(100vh-5.5rem)]">
         <h2 className="pb-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
           Figures
         </h2>
         <div
           ref={scrollRef}
-          className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pb-4 pr-1"
+          className="flex flex-col gap-4 pb-4 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:pr-1"
         >
           {/* Natural order — no reordering. The scroll-sync above places the
               active figure next to its paragraph. The carousel figure carries

@@ -5,6 +5,7 @@ import type { ReaderPayload } from "@/lib/types";
 import UrlBar from "@/components/UrlBar";
 import ReaderBody from "@/components/ReaderBody";
 import FigureSidebar from "@/components/FigureSidebar";
+import FigureSlot from "@/components/FigureSlot";
 import Landing from "@/components/Landing";
 
 export default function Home() {
@@ -132,13 +133,18 @@ export default function Home() {
       )}
 
       {data && (
-        <main className="mx-auto flex max-w-[1200px] justify-center r-0">
+        <main className="mx-auto flex max-w-[1200px] flex-col items-center pb-14 lg:flex-row lg:items-start lg:justify-center lg:pb-0">
           <ReaderBody
             data={data}
             activeParaId={activeParaId}
             onActiveParaChange={setActiveParaId}
           />
           <FigureSidebar
+            data={data}
+            activeParaId={activeParaId}
+            activeFigureIds={activeFigureIds}
+          />
+          <FigureSlot
             data={data}
             activeParaId={activeParaId}
             activeFigureIds={activeFigureIds}

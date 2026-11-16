@@ -38,7 +38,7 @@ export default function FigureLightbox({ figure, onClose }: Props) {
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-8"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4 sm:p-8"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
@@ -64,7 +64,7 @@ export default function FigureLightbox({ figure, onClose }: Props) {
           <img
             src={figure.imageUrl}
             alt={figure.caption || figure.label}
-            className="mx-auto max-h-[70vh] w-auto max-w-[min(900px,85vw)]"
+            className="mx-auto max-h-[70vh] w-auto max-w-full"
           />
         ) : figure.tableHtml ? (
           <div
@@ -75,12 +75,12 @@ export default function FigureLightbox({ figure, onClose }: Props) {
           <p className="text-sm text-zinc-500">No image available</p>
         )}
         {figure.caption && (
-          <p className="mx-auto mt-4 w-full max-w-[min(900px,85vw)] text-sm leading-6 text-zinc-700">
+          <p className="mx-auto mt-4 w-full text-sm leading-6 text-zinc-700">
             {figure.caption}
           </p>
         )}
         {figure.explanation && (
-          <p className="mx-auto mt-3 w-full max-w-[min(900px,85vw)] border-l-2 border-blue-400 bg-blue-50 px-3 py-2 text-sm leading-6 text-blue-900">
+          <p className="mx-auto mt-3 w-full border-l-2 border-blue-400 bg-blue-50 px-3 py-2 text-sm leading-6 text-blue-900">
             <span className="font-semibold">In short:</span> {figure.explanation}
           </p>
         )}
