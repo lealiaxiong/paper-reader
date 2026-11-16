@@ -133,7 +133,7 @@ export default function Home() {
       )}
 
       {data && (
-        <main className="mx-auto flex max-w-[1200px] flex-col items-center pb-14 lg:flex-row lg:items-start lg:justify-center lg:pb-0">
+        <main className="mx-auto flex max-w-[1200px] flex-col items-center pb-14 lg:flex-row lg:items-stretch lg:justify-center lg:pb-0">
           <ReaderBody
             data={data}
             activeParaId={activeParaId}
