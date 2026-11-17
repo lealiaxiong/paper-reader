@@ -1,15 +1,17 @@
 # Paper Reader
 
-An arXiv reader tuned for human reading: a 650px text column with the paper's figures floating in a side margin next to the paragraphs that cite them — no more hunting through pages to find the chart a paragraph is talking about.
+An arXiv reader tuned for human reading: a 650px text column with the paper's figures in a rail beside it, the pair centered together on wide screens. Figures stay next to the paragraphs that cite them — no more hunting through pages to find the chart a paragraph is talking about.
 
-Paste (or drag-and-drop) any arXiv link. The paper renders at reading width; as you scroll, the figure cited by the visible paragraph surfaces in the sidebar. When figure explanations are enabled, each figure also gets a plain-English **"In short:"** gloss.
+Paste (or drag-and-drop) any arXiv link. The paper renders at reading width; as you scroll, the figure cited by the visible paragraph surfaces in the figure rail at 1280px and above, or in a bottom drawer below that. When figure explanations are enabled, each figure also gets a collapsed plain-English **In short** note. Muse Ember's authorship is stated once in the figure rail or drawer, not repeated on every card.
 
 ## Features
 
-- **650px reading column**, light-mode only. Figure sidebars and lightbox stay legible against light-background figures.
-- **Scroll-synced margin figures.** Whichever paragraph is centered becomes active; its cited figure(s) highlight and align to the paragraph's height. Multiple-figure paragraphs get a carousel (`‹ 1/2 ›` + dots) that resets to the first figure when the paragraph changes and preserves your choice while scrolling within it.
-- **AI figure explanations (optional).** When enabled, each figure gets a 1–2 sentence plain-English gloss shown as a blue callout, distinct from the violet active-paragraph highlight. Opt-in: requires both `OPENROUTER_API_KEY` and `ENABLE_EXPLANATIONS=true`; otherwise the app runs fully deterministic.
-- **Full-screen lightbox.** Click any figure or table to open it at natural size. Rendered via a portal above the URL bar (`z-100`) so it covers the whole page.
+- **650px reading column in light or dark.** Lexend for paper content at 18px/1.7, with IBM Plex Sans for interface chrome. The warm paper palette is easy on the eyes; the theme follows the OS by default, with a header toggle that persists your choice. Figures and tables always sit on a light media mat, with a slight image dim in dark mode so plots stay legible without glare.
+- **A reading toolbar.** Once a paper is open, the header keeps its title and arXiv ID visible. **Open another** opens a URL popover without reflowing the page, and drag-and-drop still works anywhere.
+- **Quiet reading highlights.** Paragraphs that cite a figure get an accent rule. The active linked paragraph adds a soft violet wash; active paragraphs with no figure links stay neutral.
+- **Scroll-synced figure rail.** At 1280px and above, the reading column and figure rail are centered as one group. Whichever paragraph is centered becomes active; its cited figure(s) highlight and align to the paragraph's height. Below that, the same figures live in a persistent bottom drawer. Multiple-figure paragraphs get a carousel (`‹ 1/2 ›` + dots) that resets to the first figure when the paragraph changes and preserves your choice while scrolling within it.
+- **AI figure explanations (optional).** When enabled, each figure gets a 1–2 sentence plain-English note in a collapsed **In short** panel. Attribution appears once per figure area — in the rail, drawer, or lightbox — rather than on every card. Opt-in: requires both `OPENROUTER_API_KEY` and `ENABLE_EXPLANATIONS=true`; otherwise the app runs fully deterministic.
+- **Full-screen lightbox.** Click any figure or table to open it at natural size. Rendered via a portal above the reading toolbar (`z-100`) so it covers the whole page.
 - **Math via KaTeX.** arXiv's `<math>` TeX is extracted server-side and rendered client-side.
 - **Clean citations, no bibliography jumps.** `#bib.*` links are resolved to the real source: arXiv ID → `arxiv.org/abs/…`, DOI → `doi.org/…`, otherwise a short-query Google Scholar search. The full bibliography entry shows as a tooltip; double-comma artifacts (`"Bender et al.,, 2021"`) are normalized.
 - **Footnote cleanup.** arXiv HTML embeds full footnote text inside body paragraphs; the extractor strips it down to a superscript marker so the note doesn't duplicate in the text.
@@ -27,7 +29,7 @@ Paste (or drag-and-drop) any arXiv link. The paper renders at reading width; as 
 1. **Fetch.** The API route (`src/app/api/fetch/route.ts`) server-side fetches `https://arxiv.org/html/{id}`. Papers without an HTML version return a clear error — arXiv generates HTML asynchronously for recent submissions, and some older papers never got one.
 2. **Extract.** Cheerio parses title, authors, paragraphs, and figures (caption + image URL, or table HTML when the source has no image). Figure panels are merged by ID prefix; table HTML is compacted (LaTeXML `class`/`id` attributes dropped, `colspan`/layout styles kept). Paragraph and table HTML is then allowlist-sanitized (safe tags and URL schemes only), since arXiv markup derives from author-controlled LaTeX. Bibliography entries are scanned for arXiv IDs/DOIs to resolve citations. Math is replaced with `@@K{n}@@` placeholders and the raw TeX is collected for client-side KaTeX rendering.
 3. **Map paragraphs → figures (regex).** A deterministic pattern matches `Figure N` / `Fig. N` / `Table N` (including ranges like `Figures 46–50`) and links them **kind-aware** — `Figure 6` and `Table 6` are distinct. This is the only mapping path: free, instant, and accurate for explicit citations.
-4. **Explain figures (optional).** When both `OPENROUTER_API_KEY` and `ENABLE_EXPLANATIONS=true` are set, Meta Muse Ember via OpenRouter writes the "In short:" glosses — batched 8 figures per call, in parallel, from each caption plus up to three citing paragraphs. Failure-safe: if a batch fails, captions still render. The flag fails closed, so a deploy without it never calls the model.
+4. **Explain figures (optional).** When both `OPENROUTER_API_KEY` and `ENABLE_EXPLANATIONS=true` are set, Meta Muse Ember via OpenRouter writes the **In short** notes — batched 8 figures per call, in parallel, from each caption plus up to three citing paragraphs. Failure-safe: if a batch fails, captions still render. The flag fails closed, so a deploy without it never calls the model.
 5. **Trim + cache.** Paragraph plain text (server-only) is stripped from the response payload, then the paper is cached by arXiv ID — Upstash Redis when configured (24h TTL), otherwise in memory.
 
 ### Model usage
@@ -58,7 +60,7 @@ All optional — without any of them the app runs fully deterministically with a
 
 | Variable | Purpose |
 |---|---|
-| `OPENROUTER_API_KEY` | Enables the "In short:" figure explanations |
+| `OPENROUTER_API_KEY` | Enables the Muse Ember figure explanations |
 | `ENABLE_EXPLANATIONS` | Set to `true` (with `OPENROUTER_API_KEY`) to enable explanations; any other value disables them |
 | `KV_REST_API_URL` / `KV_REST_API_TOKEN` | Injected by the Vercel Marketplace Upstash integration; ignored outside Vercel so local dev never shares the production database |
 | `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | Optional: separate Upstash database for local dev (takes precedence over `KV_*` everywhere) |
@@ -103,6 +105,7 @@ The response includes `loadsByDay`, `totalLoads`, `cache.hitRate`, `errors`, and
 
 - **Next.js 16** (App Router) + TypeScript
 - **Tailwind CSS v4**
+- **Lexend / IBM Plex Sans** — reading and UI typefaces via `next/font`
 - **Cheerio** — server-side HTML parsing
 - **sanitize-html** — allowlist sanitization of extracted paper markup
 - **KaTeX** — math rendering

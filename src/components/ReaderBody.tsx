@@ -12,7 +12,8 @@ type Props = {
 };
 
 /**
- * Main reading column, fixed 650px width, centered.
+ * Main reading column, fixed 650px width. It is centered on its own below
+ * xl, and paired with the figure rail in a centered group at xl and up.
  * An IntersectionObserver reports which paragraph is centered in the
  * viewport — that drives the sidebar highlight.
  * Math placeholders (@@Kn@@) are rendered with KaTeX after mount.
@@ -134,21 +135,25 @@ export default function ReaderBody({ data, activeParaId, onActiveParaChange }: P
   return (
     <article
       ref={containerRef}
-      className="w-full max-w-[650px] shrink-0 px-4 py-6"
+      id="paper"
+      tabIndex={-1}
+      className="mx-auto w-full max-w-[650px] shrink-0 scroll-mt-24 px-4 py-8 font-reading xl:py-10"
       aria-label="Paper"
     >
-      <h1 className="mb-3 text-2xl font-semibold leading-snug">{data.title}</h1>
+      <h1 className="mb-3 text-balance text-[1.9rem] font-semibold leading-[1.25] tracking-tight text-foreground sm:text-[2rem]">
+        {data.title}
+      </h1>
       {data.authors.length > 0 && (
-        <p className="mb-3 text-sm leading-6 text-zinc-700">
+        <p className="mb-3 text-[15px] leading-6 text-muted">
           {data.authors.join(", ")}
         </p>
       )}
-      <p className="mb-8 text-xs text-zinc-500">
+      <p className="mb-8 font-sans text-[13px] text-subtle">
         <a
           href={`https://arxiv.org/abs/${data.arxivId}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-violet-700 underline underline-offset-2 hover:text-violet-900"
+          className="text-accent underline decoration-accent/40 underline-offset-2 hover:text-accent-strong"
           title="View on arXiv"
         >
           arXiv:{data.arxivId}
@@ -164,12 +169,12 @@ export default function ReaderBody({ data, activeParaId, onActiveParaChange }: P
             id={`para-${p.id}`}
             data-para-id={p.id}
             data-active={isActive ? "true" : "false"}
-            className={`mb-5 rounded-md px-3 py-1 text-[17px] leading-[1.7] transition-colors [&_a]:text-violet-700 [&_a]:underline [&_a]:underline-offset-2 [&_a:hover]:text-violet-900 [&_a]:break-all [&_.footnote-ref]:align-super [&_.footnote-ref]:text-[0.7em] [&_.footnote-ref]:text-zinc-500 ${
+            className={`mb-5 scroll-mt-24 rounded-md border-l-[3px] py-1 pl-3 pr-3 text-[18px] leading-[1.7] text-foreground transition-colors [&_a]:text-accent [&_a]:underline [&_a]:decoration-accent/40 [&_a]:underline-offset-2 [&_a]:break-words [&_a:hover]:text-accent-strong [&_.footnote-ref]:align-super [&_.footnote-ref]:text-[0.72em] [&_.footnote-ref]:text-subtle [&_.katex-display]:overflow-x-auto [&_.katex-display]:overflow-y-hidden [&_.katex-display]:py-2 ${
               isActive && isLinked
-                ? "bg-violet-100 text-violet-950 ring-1 ring-violet-400"
+                ? "border-accent bg-accent-soft"
                 : isLinked
-                  ? "border-l-4 border-violet-400 bg-violet-50"
-                  : "text-zinc-800"
+                  ? "border-accent-border/60"
+                  : "border-transparent"
             }`}
           >
             {renderParagraphHtml(p.html)}

@@ -1,26 +1,23 @@
-import { useDropTarget } from "./dropTarget";
-
 type Props = {
   url: string;
   onUrlChange: (v: string) => void;
   onSubmit: () => void;
   loading: boolean;
   error: string | null;
-  cached: boolean | null;
+  autoFocus?: boolean;
 };
 
-/**
- * URL bar with drag-drop of a pasted link.
- * Paste is captured at document level so a stray paste anywhere on the page works.
- */
-export default function UrlBar({ url, onUrlChange, onSubmit, loading, error, cached }: Props) {
-  const { hovering, bind } = useDropTarget((text) => {
-    const first = text.trim().split(/\s+/)[0];
-    if (first) onUrlChange(first);
-  });
-
+/** arXiv URL form, used on the landing header and in the reading toolbar. */
+export default function UrlBar({
+  url,
+  onUrlChange,
+  onSubmit,
+  loading,
+  error,
+  autoFocus = false,
+}: Props) {
   return (
-    <div {...bind} className="w-full">
+    <div className="w-full">
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -32,23 +29,22 @@ export default function UrlBar({ url, onUrlChange, onSubmit, loading, error, cac
           value={url}
           onChange={(e) => onUrlChange(e.target.value)}
           placeholder="https://arxiv.org/abs/2401.12345"
-          className="min-w-0 flex-1 rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none placeholder:text-zinc-400 focus:border-zinc-500"
+          autoFocus={autoFocus}
+          className="h-10 min-w-0 flex-1 rounded-lg border border-border bg-surface-raised px-3 text-sm text-foreground shadow-sm transition-colors placeholder:text-subtle hover:border-border-strong focus:border-accent"
           aria-label="arXiv URL"
         />
         <button
           type="submit"
           disabled={loading || !url.trim()}
-          className="rounded-md bg-zinc-900 px-4 py-2 text-sm text-white disabled:opacity-50"
+          className="h-10 rounded-lg border border-transparent bg-button px-4 text-sm font-medium text-button-foreground transition-colors hover:bg-button-hover disabled:cursor-not-allowed disabled:border-border disabled:bg-surface disabled:text-subtle disabled:hover:bg-surface"
         >
           {loading ? "Loading…" : "Open"}
         </button>
       </form>
-      {hovering && (
-        <p className="mt-1 text-xs text-zinc-500">Drop to use this link</p>
-      )}
-      {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
-      {cached && (
-        <p className="mt-2 text-xs text-zinc-500">Served from cache (no re-fetch)</p>
+      {error && (
+        <p role="alert" className="mt-2 text-sm text-danger">
+          {error}
+        </p>
       )}
     </div>
   );

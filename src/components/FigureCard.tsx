@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { Figure } from "@/lib/types";
 import FigureLightbox from "./FigureLightbox";
+import FigureExplanation from "./FigureExplanation";
 
 type Props = {
   figure: Figure;
@@ -28,81 +29,101 @@ export default function FigureCard({ figure, active, carousel }: Props) {
     <img
       src={figure.imageUrl}
       alt={figure.caption || figure.label}
-      className={`max-h-64 w-full object-contain ${clickable ? "pointer-events-none" : ""}`}
+      className={`max-h-72 w-full object-contain dark:brightness-[0.94] ${clickable ? "pointer-events-none" : ""}`}
       loading="lazy"
     />
   ) : figure.tableHtml ? (
-    <div
-      className="max-h-64 overflow-auto text-xs text-zinc-800 [&_table]:border-collapse [&_th]:border-b [&_th]:border-zinc-300 [&_th]:px-1.5 [&_th]:py-0.5 [&_th]:text-left [&_th]:align-top [&_td]:px-1.5 [&_td]:py-0.5 [&_td]:align-top [&_td]:break-words"
-      dangerouslySetInnerHTML={{ __html: figure.tableHtml }}
-    />
+    <div className="max-h-72 overflow-auto font-reading text-[13px] leading-5 text-media-foreground [&_table]:border-collapse [&_th]:border-b [&_th]:border-media-border [&_th]:px-2 [&_th]:py-1 [&_th]:text-left [&_th]:align-top [&_th]:font-semibold [&_td]:border-b [&_td]:border-media-border/70 [&_td]:px-2 [&_td]:py-1 [&_td]:align-top [&_td]:break-words [&_td]:tabular-nums [&_tr:nth-child(even)]:bg-black/[0.035]">
+      <div dangerouslySetInnerHTML={{ __html: figure.tableHtml }} />
+    </div>
   ) : (
-    <div className="flex h-24 items-center justify-center rounded bg-zinc-100 text-xs text-zinc-500">
+    <div className="flex h-24 items-center justify-center rounded bg-media font-sans text-xs text-media-foreground/70">
       No image available
     </div>
   );
+
+  const openLightbox = () => setLightboxOpen(true);
 
   return (
     <>
       <figure
         id={`fig-${figure.id}`}
-        className={`rounded-lg border bg-white p-3 shadow-sm transition ${
+        className={`rounded-xl border bg-surface-raised p-3 transition-colors ${
           active
-            ? "border-violet-500 bg-violet-100 ring-1 ring-violet-400"
-            : "border-zinc-200"
+            ? "border-accent-border ring-1 ring-accent-border/30"
+            : "border-border"
         }`}
       >
-        <div className="mb-2 flex items-center justify-between">
-          <figcaption className="text-xs font-semibold uppercase tracking-wide text-zinc-600">
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <figcaption
+            className={`font-sans text-xs font-semibold ${
+              active ? "text-accent-strong" : "text-muted"
+            }`}
+          >
             {figure.label}
           </figcaption>
           {clickable && (
-            <span className="text-xs text-zinc-400" title="Click to expand">
+            <span
+              className="font-sans text-xs text-subtle"
+              title="Click to expand"
+              aria-hidden="true"
+            >
               ⤢
             </span>
           )}
         </div>
         {clickable ? (
           <div
-            onClick={() => setLightboxOpen(true)}
+            onClick={openLightbox}
             role="button"
             tabIndex={0}
             onKeyDown={(e) => {
-              if (e.key === "Enter") setLightboxOpen(true);
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                openLightbox();
+              }
             }}
-            className="cursor-zoom-in transition hover:scale-[1.02] hover:shadow-lg"
+            className="cursor-zoom-in rounded-lg border border-media-border bg-media p-2 transition-opacity hover:opacity-95"
+            aria-label={`Expand ${figure.label}`}
           >
             {body}
           </div>
         ) : (
-          body
+          <div className="rounded-lg border border-media-border bg-media p-2">
+            {body}
+          </div>
+        )}
+        {figure.caption && (
+          <p className="mt-2.5 font-reading text-[13px] leading-[1.55] text-muted">
+            {figure.caption}
+          </p>
         )}
         {carousel && carousel.total > 1 && (
-          <div className="mt-2 flex items-center justify-center gap-3 border-t border-violet-200 pt-2">
+          <div className="mt-2.5 flex items-center justify-center gap-3 border-t border-border pt-2.5">
             <button
               onClick={carousel.onPrev}
-              className="rounded border border-violet-300 px-2 py-0.5 text-xs text-violet-700 hover:bg-violet-100 disabled:opacity-40"
+              className="grid h-8 w-8 place-items-center rounded-md border border-border font-sans text-base text-accent transition-colors hover:bg-accent-soft disabled:cursor-not-allowed disabled:opacity-40"
               disabled={carousel.index === 0}
               aria-label="Previous figure"
             >
               ‹
             </button>
-            <span className="text-xs font-medium text-violet-800">
+            <span className="font-sans text-xs font-medium tabular-nums text-subtle">
               {carousel.index + 1} / {carousel.total}
             </span>
-            <span className="flex gap-1" aria-hidden>
+            <span className="flex gap-1" aria-hidden="true">
               {Array.from({ length: carousel.total }).map((_, i) => (
                 <span
                   key={i}
                   className={`h-1.5 w-1.5 rounded-full ${
-                    i === carousel.index ? "bg-violet-600" : "bg-violet-200"
+                    i === carousel.index ? "bg-accent" : "bg-border-strong"
                   }`}
                 />
               ))}
             </span>
             <button
               onClick={carousel.onNext}
-              className="rounded border border-violet-300 px-2 py-0.5 text-xs text-violet-700 hover:bg-violet-100 disabled:opacity-40"
+              className="grid h-8 w-8 place-items-center rounded-md border border-border font-sans text-base text-accent transition-colors hover:bg-accent-soft disabled:cursor-not-allowed disabled:opacity-40"
               disabled={carousel.index === carousel.total - 1}
               aria-label="Next figure"
             >
@@ -110,13 +131,11 @@ export default function FigureCard({ figure, active, carousel }: Props) {
             </button>
           </div>
         )}
-        {figure.caption && (
-          <p className="mt-2 text-xs leading-5 text-zinc-600">{figure.caption}</p>
-        )}
         {figure.explanation && (
-          <p className="mt-2 border-l-2 border-blue-400 bg-blue-50 px-2 py-1 text-xs leading-5 text-blue-900">
-            <span className="font-semibold">In short:</span> {figure.explanation}
-          </p>
+          <FigureExplanation
+            explanation={figure.explanation}
+            className="mt-2.5"
+          />
         )}
       </figure>
       {lightboxOpen && (

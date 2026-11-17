@@ -1,20 +1,115 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --header-height: 4rem;
+
+  --background: #fbfaf6;
+  --surface: #f4f1e9;
+  --surface-raised: #fffefb;
+  --border: #e5dfd3;
+  --border-strong: #d6cfc1;
+  --foreground: #1d1b18;
+  --muted: #4a463f;
+  --subtle: #6b6459;
+  --accent: #6d28d9;
+  --accent-strong: #5b21b6;
+  --accent-soft: #f2ecff;
+  --accent-soft-strong: #e9dfff;
+  --accent-border: #a78bfa;
+  --media: #faf7f0;
+  --media-foreground: #1d1b18;
+  --media-border: #e5dfd3;
+  --danger: #b91c1c;
+  --button: #6d28d9;
+  --button-foreground: #ffffff;
+  --button-hover: #5b21b6;
+  --focus: #7c3aed;
+  --selection-bg: #e9dfff;
+  --selection-fg: #2e1065;
+
   color-scheme: light;
+}
+
+.dark {
+  --background: #14120f;
+  --surface: #1b1814;
+  --surface-raised: #231f1a;
+  --border: #332e27;
+  --border-strong: #4a433a;
+  --foreground: #f3eee5;
+  --muted: #d7cfc2;
+  --subtle: #a79e90;
+  --accent: #b9a0ff;
+  --accent-strong: #d3c2ff;
+  --accent-soft: rgba(185, 160, 255, 0.14);
+  --accent-soft-strong: rgba(185, 160, 255, 0.22);
+  --accent-border: #8b5cf6;
+  --media: #e9e4da;
+  --media-foreground: #1d1b18;
+  --media-border: #cfc8bb;
+  --danger: #fca5a5;
+  --button: #a78bfa;
+  --button-foreground: #14120f;
+  --button-hover: #b9a0ff;
+  --focus: #b9a0ff;
+  --selection-bg: #4c1d95;
+  --selection-fg: #f5f3ff;
+
+  color-scheme: dark;
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-muted: var(--muted);
+  --color-subtle: var(--subtle);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-soft-strong: var(--accent-soft-strong);
+  --color-accent-border: var(--accent-border);
+  --color-media: var(--media);
+  --color-media-foreground: var(--media-foreground);
+  --color-media-border: var(--media-border);
+  --color-danger: var(--danger);
+  --color-button: var(--button);
+  --color-button-foreground: var(--button-foreground);
+  --color-button-hover: var(--button-hover);
+  --font-sans: var(--font-plex);
+  --font-reading: var(--font-lexend);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-plex), ui-sans-serif, system-ui, sans-serif;
+}
+
+:where(a, button, input, textarea, select, summary, [role="button"], [tabindex]:not([tabindex="-1"])):focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: var(--selection-bg);
+  color: var(--selection-fg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .animate-spin {
+    animation: none;
+  }
 }

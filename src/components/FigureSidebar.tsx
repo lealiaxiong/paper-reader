@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { ReaderPayload } from "@/lib/types";
 import FigureCard from "./FigureCard";
+import { MUSE_EMBER_NOTE } from "./FigureExplanation";
 
 type Props = {
   data: ReaderPayload;
@@ -11,10 +12,10 @@ type Props = {
 };
 
 /**
- * Desktop (lg+) margin figures: sticky sidebar with its own scroll, hidden
- * on mobile where FigureSlot provides figure access. List is in natural
- * order, and on window scroll the inner list is scrolled so the active
- * figure appears at the same viewport Y as the active paragraph.
+ * Desktop (xl+) margin figures: sticky 360px sidebar with its own scroll,
+ * hidden below 1280px where FigureSlot provides figure access. List is in
+ * natural order, and on window scroll the inner list is scrolled so the
+ * active figure appears at the same viewport Y as the active paragraph.
  *
  * Multi-figure paragraphs get a carousel: the active slot shows one figure
  * at a time with prev/next nav and dots. When the paragraph changes, the
@@ -57,9 +58,9 @@ export default function FigureSidebar({ data, activeParaId, activeFigureIds }: P
 
   useEffect(() => {
     // Scroll-sync only makes sense in the desktop side-by-side layout;
-    // on mobile the sidebar stacks below the article. Checked on every
-    // tick so rotating/resizing across the breakpoint behaves too.
-    const mq = window.matchMedia("(min-width: 1024px)");
+    // below 1280px the sidebar is hidden and FigureSlot is used. Checked
+    // on every tick so resizing across the breakpoint behaves too.
+    const mq = window.matchMedia("(min-width: 1280px)");
 
     const sync = () => {
       if (!mq.matches) return;
@@ -106,20 +107,29 @@ export default function FigureSidebar({ data, activeParaId, activeFigureIds }: P
     };
   }, [activeParaId, activeFigureIds, currentCarouselFigure]);
 
+  const hasExplanations = data.figures.some((figure) => !!figure.explanation);
+
   if (data.figures.length === 0) {
     return (
-      <aside className="hidden lg:block lg:w-80 lg:shrink-0 lg:p-4">
-        No figures detected in this paper.
+      <aside className="hidden w-full xl:block">
+        <p className="text-sm leading-relaxed text-subtle">
+          No figures detected in this paper.
+        </p>
       </aside>
     );
   }
 
   return (
-    <aside className="hidden lg:block lg:w-80 lg:shrink-0 lg:p-4">
-      <div className="sticky top-[4.5rem] flex max-h-[calc(100vh-5.5rem)] flex-col">
-        <h2 className="pb-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
-          Figures
-        </h2>
+    <aside className="hidden w-full xl:block">
+      <div className="sticky top-[calc(var(--header-height)+1rem)] flex max-h-[calc(100dvh-var(--header-height)-2rem)] flex-col">
+        <div className="pb-2">
+          <h2 className="font-sans text-xs font-semibold text-muted">Figures</h2>
+          {hasExplanations && (
+            <p className="mt-1 font-sans text-[11px] leading-tight text-subtle">
+              {MUSE_EMBER_NOTE}
+            </p>
+          )}
+        </div>
         <div
           ref={scrollRef}
           className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pb-4 pr-1"
