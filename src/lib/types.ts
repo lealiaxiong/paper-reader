@@ -1,3 +1,5 @@
+import type { SourceId } from "./sources";
+
 export interface Figure {
   /** Stable internal id, e.g. "f1" */
   id: string;
@@ -27,7 +29,8 @@ export interface Paragraph {
 }
 
 export interface ReaderData {
-  arxivId: string;
+  source: SourceId;
+  sourceId: string;
   title: string;
   authors: string[];
   paragraphs: Paragraph[];

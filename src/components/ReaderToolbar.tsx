@@ -1,6 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  sourceCitation,
+  sourceExternalUrl,
+  sourceLabel,
+} from "@/lib/sources";
 import type { ReaderPayload } from "@/lib/types";
 import BrandButton from "./Brand";
 import ThemeToggle from "./ThemeToggle";
@@ -10,7 +15,7 @@ type Props = {
   data: ReaderPayload;
   url: string;
   onUrlChange: (value: string) => void;
-  onSubmit: () => void;
+  onSubmit: () => boolean | void;
   loading: boolean;
   error: string | null;
   onHome: () => void;
@@ -32,6 +37,7 @@ export default function ReaderToolbar({
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  const paperRef = { source: data.source, id: data.sourceId };
 
   const close = useCallback((returnFocus = false) => {
     setOpen(false);
@@ -77,13 +83,13 @@ export default function ReaderToolbar({
           </p>
           <p className="mt-0.5 text-[11px] leading-none text-subtle">
             <a
-              href={`https://arxiv.org/abs/${data.arxivId}`}
+              href={sourceExternalUrl(paperRef)}
               target="_blank"
               rel="noopener noreferrer"
               className="transition-colors hover:text-accent"
-              title="View on arXiv"
+              title={`View on ${sourceLabel(data.source)}`}
             >
-              arXiv:{data.arxivId}
+              {sourceCitation(paperRef)}
             </a>
           </p>
         </div>
@@ -130,8 +136,7 @@ export default function ReaderToolbar({
               url={url}
               onUrlChange={onUrlChange}
               onSubmit={() => {
-                setOpen(false);
-                onSubmit();
+                if (onSubmit() !== false) setOpen(false);
               }}
               loading={loading}
               error={error}

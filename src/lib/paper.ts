@@ -92,15 +92,6 @@ const TABLE_SANITIZE: sanitizeHtml.IOptions = {
   allowProtocolRelative: false,
 };
 
-/** Extract arXiv ID from abs/html/pdf links. Returns null if not an arXiv URL. */
-export function extractArxivId(input: string): string | null {
-  const m = input.match(/arxiv\.org\/(?:abs|html|pdf|export|list)\/(\d{4}\.\d{4,5})(v\d+)?/);
-  if (m) return m[1];
-  // Bare ID, e.g. "2401.12345" or "2401.12345v2"
-  const bare = input.trim().match(/^(\d{4}\.\d{4,5})(v\d+)?$/);
-  return bare ? bare[1] : null;
-}
-
 /**
  * Fetch the arXiv HTML version. A 404 means the paper has no HTML version —
  * common for very recent submissions (arXiv generates HTML asynchronously)
@@ -449,7 +440,15 @@ export function extractPaper(html: string, arxivId: string): ReaderData {
     tableHtml: m.tableHtml,
   }));
 
-  return { arxivId, title, authors, paragraphs, figures, paraFigureMap: {} };
+  return {
+    source: "arxiv",
+    sourceId: arxivId,
+    title,
+    authors,
+    paragraphs,
+    figures,
+    paraFigureMap: {},
+  };
 }
 
 type OpenRouterResponse = {

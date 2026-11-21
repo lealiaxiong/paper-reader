@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCached, setCached } from "@/lib/cache";
-import { extractArxivId, fetchArxivHtml, processPaper, toClientPayload } from "@/lib/paper";
+import { toClientPayload } from "@/lib/paper";
 import { clientIp, fetchLimiter } from "@/lib/ratelimit";
+import { loadSourcePaper } from "@/lib/source-loader";
+import { parseSourceId, type SourceRef } from "@/lib/sources";
 import { recordError, recordPaperLoad } from "@/lib/stats";
 import type { ReaderPayload } from "@/lib/types";
 
@@ -16,34 +18,35 @@ export const maxDuration = 60;
  */
 const inFlight = new Map<string, Promise<ReaderPayload>>();
 
-function loadPaper(arxivId: string): Promise<ReaderPayload> {
-  const existing = inFlight.get(arxivId);
+function loadPaper(ref: SourceRef): Promise<ReaderPayload> {
+  const cacheKey = `${ref.source}:${ref.id}`;
+  const existing = inFlight.get(cacheKey);
   if (existing) return existing;
   const pending = (async () => {
-    const html = await fetchArxivHtml(arxivId);
-    const data = toClientPayload(await processPaper(arxivId, html));
-    await setCached(arxivId, data);
+    const data = toClientPayload(await loadSourcePaper(ref));
+    await setCached(ref, data);
     return data;
   })();
-  inFlight.set(arxivId, pending);
-  const cleanup = () => inFlight.delete(arxivId);
+  inFlight.set(cacheKey, pending);
+  const cleanup = () => inFlight.delete(cacheKey);
   pending.then(cleanup, cleanup);
   return pending;
 }
 
 export async function POST(req: NextRequest) {
-  let body: { url?: unknown } | null = null;
+  let body: { source?: unknown; id?: unknown } | null = null;
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const url = typeof body?.url === "string" ? body.url.trim() : "";
-  const arxivId = extractArxivId(url);
-  if (!arxivId) {
+  const source = typeof body?.source === "string" ? body.source.trim() : "";
+  const id = typeof body?.id === "string" ? body.id.trim() : "";
+  const ref = parseSourceId(source, id);
+  if (!ref) {
     return NextResponse.json(
-      { error: "Provide an arXiv URL (e.g. https://arxiv.org/abs/2401.12345)" },
+      { error: "Unsupported paper source or identifier" },
       { status: 400 },
     );
   }
@@ -70,15 +73,15 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const cached = await getCached(arxivId);
+  const cached = await getCached(ref);
   if (cached) {
-    await recordPaperLoad(arxivId, true);
+    await recordPaperLoad(ref, true);
     return NextResponse.json({ data: cached, cached: true });
   }
 
   try {
-    const data = await loadPaper(arxivId);
-    await recordPaperLoad(arxivId, false);
+    const data = await loadPaper(ref);
+    await recordPaperLoad(ref, false);
     return NextResponse.json({ data, cached: false });
   } catch (err) {
     await recordError();

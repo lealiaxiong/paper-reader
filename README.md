@@ -2,12 +2,13 @@
 
 An arXiv reader tuned for human reading: a 650px text column with the paper's figures in a rail beside it, the pair centered together on wide screens. Figures stay next to the paragraphs that cite them — no more hunting through pages to find the chart a paragraph is talking about.
 
-Paste (or drag-and-drop) any arXiv link. The paper renders at reading width; as you scroll, the figure cited by the visible paragraph surfaces in the figure rail at 1280px and above, or in a bottom drawer below that. When figure explanations are enabled, each figure also gets a collapsed plain-English **In short** note. Muse Ember's authorship is stated once in the figure rail or drawer, not repeated on every card.
+Paste (or drag-and-drop) any arXiv link. The paper renders at reading width; as you scroll, the figure cited by the visible paragraph surfaces in the figure rail at 1280px and above, or in a bottom drawer below that. Each paper has a canonical URL (`/read/arxiv/2401.12345`), so reloads, bookmarks, and shared links reopen the same paper. When figure explanations are enabled, each figure also gets a collapsed plain-English **In short** note. Muse Ember's authorship is stated once in the figure rail or drawer, not repeated on every card.
 
 ## Features
 
 - **650px reading column in light or dark.** Lexend for paper content at 18px/1.7, with IBM Plex Sans for interface chrome. The warm paper palette is easy on the eyes; the theme follows the OS by default, with a header toggle that persists your choice. Figures and tables always sit on a light media mat, with a slight image dim in dark mode so plots stay legible without glare.
-- **A reading toolbar.** Once a paper is open, the header keeps its title and arXiv ID visible. **Open another** opens a URL popover without reflowing the page, and drag-and-drop still works anywhere.
+- **Addressable paper URLs.** Opening a paper changes the address to `/read/arxiv/<id>`; refreshing, sharing, and browser back/forward all work. The source is part of the route, so future providers can live under `/read/doi/...` or `/read/openreview/...` without changing the reader.
+- **A reading toolbar.** Once a paper is open, the header keeps its title and arXiv ID visible. **Open another** opens a URL popover without reflowing the page, and drag-and-drop still works anywhere. Both navigate to the new paper’s canonical URL.
 - **Quiet reading highlights.** Paragraphs that cite a figure get an accent rule. The active linked paragraph adds a soft violet wash; active paragraphs with no figure links stay neutral.
 - **Scroll-synced figure rail.** At 1280px and above, the reading column and figure rail are centered as one group. Whichever paragraph is centered becomes active; its cited figure(s) highlight and align to the paragraph's height. Below that, the same figures live in a persistent bottom drawer. Multiple-figure paragraphs get a carousel (`‹ 1/2 ›` + dots) that resets to the first figure when the paragraph changes and preserves your choice while scrolling within it.
 - **AI figure explanations (optional).** When enabled, each figure gets a 1–2 sentence plain-English note in a collapsed **In short** panel. Attribution appears once per figure area — in the rail, drawer, or lightbox — rather than on every card. Opt-in: requires both `OPENROUTER_API_KEY` and `ENABLE_EXPLANATIONS=true`; otherwise the app runs fully deterministic.
@@ -26,7 +27,7 @@ Paste (or drag-and-drop) any arXiv link. The paper renders at reading width; as 
 
 ### Pipeline
 
-1. **Fetch.** The API route (`src/app/api/fetch/route.ts`) server-side fetches `https://arxiv.org/html/{id}`. Papers without an HTML version return a clear error — arXiv generates HTML asynchronously for recent submissions, and some older papers never got one.
+1. **Fetch.** The reader route resolves a canonical source/ID pair, and the API route (`src/app/api/fetch/route.ts`) server-side fetches `https://arxiv.org/html/{id}`. Papers without an HTML version return a clear error — arXiv generates HTML asynchronously for recent submissions, and some older papers never got one.
 2. **Extract.** Cheerio parses title, authors, paragraphs, and figures (caption + image URL, or table HTML when the source has no image). Figure panels are merged by ID prefix; table HTML is compacted (LaTeXML `class`/`id` attributes dropped, `colspan`/layout styles kept). Paragraph and table HTML is then allowlist-sanitized (safe tags and URL schemes only), since arXiv markup derives from author-controlled LaTeX. Bibliography entries are scanned for arXiv IDs/DOIs to resolve citations. Math is replaced with `@@K{n}@@` placeholders and the raw TeX is collected for client-side KaTeX rendering.
 3. **Map paragraphs → figures (regex).** A deterministic pattern matches `Figure N` / `Fig. N` / `Table N` (including ranges like `Figures 46–50`) and links them **kind-aware** — `Figure 6` and `Table 6` are distinct. This is the only mapping path: free, instant, and accurate for explicit citations.
 4. **Explain figures (optional).** When both `OPENROUTER_API_KEY` and `ENABLE_EXPLANATIONS=true` are set, Meta Muse Ember via OpenRouter writes the **In short** notes — batched 8 figures per call, in parallel, from each caption plus up to three citing paragraphs. Failure-safe: if a batch fails, captions still render. The flag fails closed, so a deploy without it never calls the model.
@@ -99,7 +100,7 @@ The response includes `loadsByDay`, `totalLoads`, `cache.hitRate`, `errors`, and
 
 ## Testing
 
-`npm test` runs Vitest against pinned arXiv HTML fixtures in `test/fixtures/` (gzipped, no network access). The suite covers arXiv ID parsing, extraction (paragraphs, authors, figures, tables, math, citation links, footnote stripping), table HTML compaction, HTML sanitization (XSS regression cases for links, footnotes, and tables), regex figure mapping, and client payload trimming. To refresh a fixture, download the pinned arXiv HTML version and gzip it, then update any counts that changed intentionally.
+`npm test` runs Vitest against pinned arXiv HTML fixtures in `test/fixtures/` (gzipped, no network access). The suite covers arXiv ID/source-route parsing, extraction (paragraphs, authors, figures, tables, math, citation links, footnote stripping), table HTML compaction, HTML sanitization (XSS regression cases for links, footnotes, and tables), regex figure mapping, and client payload trimming. To refresh a fixture, download the pinned arXiv HTML version and gzip it, then update any counts that changed intentionally.
 
 ## Tech stack
 

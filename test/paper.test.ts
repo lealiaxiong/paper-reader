@@ -3,10 +3,16 @@ import { readFileSync } from "node:fs";
 import { gunzipSync } from "node:zlib";
 import {
   buildRegexFigureMap,
-  extractArxivId,
   extractPaper,
   toClientPayload,
 } from "@/lib/paper";
+import {
+  extractArxivId,
+  parseSourceId,
+  parseSourceInput,
+  parseSourceRoute,
+  sourcePath,
+} from "@/lib/sources";
 import type { Figure, Paragraph, ReaderData } from "@/lib/types";
 
 /**
@@ -79,9 +85,38 @@ describe("extractArxivId", () => {
   });
 });
 
+describe("source references", () => {
+  it("normalizes URLs and bare IDs to a canonical source ref", () => {
+    const ref = parseSourceInput("https://arxiv.org/html/2401.12345v2");
+    expect(ref).toEqual({ source: "arxiv", id: "2401.12345" });
+    expect(sourcePath(ref!)).toBe("/read/arxiv/2401.12345");
+  });
+
+  it("parses canonical route segments", () => {
+    expect(parseSourceRoute("arxiv", ["2401.12345"])).toEqual({
+      source: "arxiv",
+      id: "2401.12345",
+    });
+    expect(parseSourceRoute("arxiv", ["2401.12345", "extra"])).toBeNull();
+    expect(parseSourceRoute("unknown", ["2401.12345"])).toBeNull();
+    expect(parseSourceRoute("arxiv", [])).toBeNull();
+  });
+
+  it("validates API source/id pairs", () => {
+    expect(parseSourceId("arxiv", " 2401.12345v3 ")).toEqual({
+      source: "arxiv",
+      id: "2401.12345",
+    });
+    expect(parseSourceId("arxiv", "https://arxiv.org/abs/2401.12345")).toBeNull();
+    expect(parseSourceId("unknown", "2401.12345")).toBeNull();
+  });
+});
+
 describe("extractPaper (InstructGPT fixture)", () => {
   it("extracts title, authors, and paragraph count", () => {
     const paper = ig();
+    expect(paper.source).toBe("arxiv");
+    expect(paper.sourceId).toBe("2203.02155");
     expect(paper.title).toContain(
       "Training language models to follow instructions",
     );

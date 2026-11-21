@@ -61,7 +61,12 @@ export async function GET(req: NextRequest) {
   const hits = Number(cacheHits ?? 0);
   const misses = Number(cacheMisses ?? 0);
   const topPapers = Object.entries(papers ?? {})
-    .map(([arxivId, count]) => ({ arxivId, loads: Number(count) }))
+    .map(([key, count]) => {
+      const separator = key.indexOf(":");
+      const source = separator === -1 ? "arxiv" : key.slice(0, separator);
+      const id = separator === -1 ? key : key.slice(separator + 1);
+      return { source, id, loads: Number(count) };
+    })
     .sort((a, b) => b.loads - a.loads)
     .slice(0, 20);
 

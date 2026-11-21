@@ -1,4 +1,5 @@
 import type { Redis } from "@upstash/redis";
+import type { SourceRef } from "./sources";
 import { redis } from "./redis";
 
 const DAY_SECONDS = 86_400;
@@ -19,7 +20,7 @@ function productionClient(): Redis | null {
 }
 
 export async function recordPaperLoad(
-  arxivId: string,
+  ref: SourceRef,
   cacheHit: boolean,
 ): Promise<void> {
   const client = productionClient();
@@ -30,7 +31,7 @@ export async function recordPaperLoad(
       .pipeline()
       .incr(`stats:loads:${day}`)
       .incr(cacheHit ? "stats:cache:hits" : "stats:cache:misses")
-      .hincrby("stats:papers", arxivId, 1)
+      .hincrby("stats:papers", `${ref.source}:${ref.id}`, 1)
       .expire(`stats:loads:${day}`, DAYS_RETAINED * DAY_SECONDS)
       .exec();
   } catch (err) {

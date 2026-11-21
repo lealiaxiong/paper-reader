@@ -3,6 +3,11 @@
 import { useEffect, useRef } from "react";
 import katex from "katex";
 import "katex/dist/katex.min.css";
+import {
+  sourceCitation,
+  sourceExternalUrl,
+  sourceLabel,
+} from "@/lib/sources";
 import type { ReaderPayload } from "@/lib/types";
 
 type Props = {
@@ -20,6 +25,7 @@ type Props = {
  */
 export default function ReaderBody({ data, activeParaId, onActiveParaChange }: Props) {
   const containerRef = useRef<HTMLElement>(null);
+  const paperRef = { source: data.source, id: data.sourceId };
 
   useEffect(() => {
     const root = containerRef.current;
@@ -150,13 +156,13 @@ export default function ReaderBody({ data, activeParaId, onActiveParaChange }: P
       )}
       <p className="mb-8 font-sans text-[13px] text-subtle">
         <a
-          href={`https://arxiv.org/abs/${data.arxivId}`}
+          href={sourceExternalUrl(paperRef)}
           target="_blank"
           rel="noopener noreferrer"
           className="text-accent underline decoration-accent/40 underline-offset-2 hover:text-accent-strong"
-          title="View on arXiv"
+          title={`View on ${sourceLabel(data.source)}`}
         >
-          arXiv:{data.arxivId}
+          {sourceCitation(paperRef)}
         </a>
       </p>
 
