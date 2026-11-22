@@ -2,13 +2,14 @@
 
 An arXiv reader tuned for human reading: a 650px text column with the paper's figures in a rail beside it, the pair centered together on wide screens. Figures stay next to the paragraphs that cite them — no more hunting through pages to find the chart a paragraph is talking about.
 
-Paste (or drag-and-drop) any arXiv link. The paper renders at reading width; as you scroll, the figure cited by the visible paragraph surfaces in the figure rail at 1280px and above, or in a bottom drawer below that. Each paper has a canonical URL (`/read/arxiv/2401.12345`), so reloads, bookmarks, and shared links reopen the same paper. When figure explanations are enabled, each figure also gets a collapsed plain-English **In short** note. Muse Ember's authorship is stated once in the figure rail or drawer, not repeated on every card.
+Paste any arXiv link. The paper renders at reading width; as you scroll, the figure cited by the visible paragraph surfaces in the figure rail at 1280px and above, or in a bottom drawer below that. Each paper has a canonical URL (`/read/arxiv/2401.12345`), so reloads, bookmarks, and shared links reopen the same paper. When figure explanations are enabled, each figure also gets a collapsed plain-English **In short** note. Muse Ember's authorship is stated once in the figure rail or drawer, not repeated on every card.
 
 ## Features
 
 - **650px reading column in light or dark.** Lexend for paper content at 18px/1.7, with IBM Plex Sans for interface chrome. The warm paper palette is easy on the eyes; the theme follows the OS by default, with a header toggle that persists your choice. Figures and tables always sit on a light media mat, with a slight image dim in dark mode so plots stay legible without glare.
 - **Addressable paper URLs.** Opening a paper changes the address to `/read/arxiv/<id>`; refreshing, sharing, and browser back/forward all work. The source is part of the route, so future providers can live under `/read/doi/...` or `/read/openreview/...` without changing the reader.
-- **A reading toolbar.** Once a paper is open, the header keeps its title and arXiv ID visible. **Open another** opens a URL popover without reflowing the page, and drag-and-drop still works anywhere. Both navigate to the new paper’s canonical URL.
+- **ar5iv fallback.** When arXiv has no HTML version, the server tries ar5iv’s LaTeXML conversion. ar5iv is a fallback, not the canonical source, and may lag recent arXiv submissions.
+- **A reading toolbar.** Once a paper is open, the header keeps its title and arXiv ID visible. **Open another** opens a URL popover without reflowing the page and navigates to the new paper’s canonical URL.
 - **Quiet reading highlights.** Paragraphs that cite a figure get an accent rule. The active linked paragraph adds a soft violet wash; active paragraphs with no figure links stay neutral.
 - **Scroll-synced figure rail.** At 1280px and above, the reading column and figure rail are centered as one group. Whichever paragraph is centered becomes active; its cited figure(s) highlight and align to the paragraph's height. Below that, the same figures live in a persistent bottom drawer. Multiple-figure paragraphs get a carousel (`‹ 1/2 ›` + dots) that resets to the first figure when the paragraph changes and preserves your choice while scrolling within it.
 - **AI figure explanations (optional).** When enabled, each figure gets a 1–2 sentence plain-English note in a collapsed **In short** panel. Attribution appears once per figure area — in the rail, drawer, or lightbox — rather than on every card. Opt-in: requires both `OPENROUTER_API_KEY` and `ENABLE_EXPLANATIONS=true`; otherwise the app runs fully deterministic.
@@ -18,16 +19,15 @@ Paste (or drag-and-drop) any arXiv link. The paper renders at reading width; as 
 - **Footnote cleanup.** arXiv HTML embeds full footnote text inside body paragraphs; the extractor strips it down to a superscript marker so the note doesn't duplicate in the text.
 - **Panel merging.** Tables/figures split across multiple `<figure>` elements (container + panel) are merged into one card. Figure N and Table N are never conflated — papers number them independently.
 - **Caching.** On Vercel, shared through Upstash Redis (24h TTL, versioned keys so extraction changes never serve stale payloads). Local dev uses an in-memory cache instead: Vercel-injected `KV_*` credentials are only honored on Vercel, so dev and prod never share a database. Keyed by arXiv ID, so `abs/`, `html/`, and `pdf/` links for the same paper share one entry.
-- **Abuse protections.** Input validation, arXiv fetch size/type caps (5 MB), per-IP rate limiting (20 requests/minute via Upstash, when Redis is configured), and single-flight deduplication of concurrent requests for the same paper.
+- **Abuse protections.** Input validation, provider fetch size/type caps (5 MB), per-IP rate limiting (20 requests/minute via Upstash, when Redis is configured), and single-flight deduplication of concurrent requests for the same paper.
 - **Sanitized paper HTML.** All text and table markup extracted from arXiv is allowlist-sanitized before it reaches the browser — no scripts, event handlers, `javascript:` URLs, or arbitrary styles.
 - **Anonymous, single-use.** No accounts or history — paste a link, read, close.
-- **Drag-and-drop.** Drop an arXiv link anywhere on the page to load it.
 
 ## How it works
 
 ### Pipeline
 
-1. **Fetch.** The reader route resolves a canonical source/ID pair, and the API route (`src/app/api/fetch/route.ts`) server-side fetches `https://arxiv.org/html/{id}`. Papers without an HTML version return a clear error — arXiv generates HTML asynchronously for recent submissions, and some older papers never got one.
+1. **Fetch.** The reader route resolves a canonical source/ID pair, and the API route (`src/app/api/fetch/route.ts`) server-side tries `https://arxiv.org/html/{id}`, then `https://ar5iv.arxiv.org/html/{id}` when arXiv has no HTML. ar5iv can redirect to the abstract page when it has no conversion, so responses must contain LaTeXML markup before they are accepted. Image URLs resolve against whichever provider served the page.
 2. **Extract.** Cheerio parses title, authors, paragraphs, and figures (caption + image URL, or table HTML when the source has no image). Figure panels are merged by ID prefix; table HTML is compacted (LaTeXML `class`/`id` attributes dropped, `colspan`/layout styles kept). Paragraph and table HTML is then allowlist-sanitized (safe tags and URL schemes only), since arXiv markup derives from author-controlled LaTeX. Bibliography entries are scanned for arXiv IDs/DOIs to resolve citations. Math is replaced with `@@K{n}@@` placeholders and the raw TeX is collected for client-side KaTeX rendering.
 3. **Map paragraphs → figures (regex).** A deterministic pattern matches `Figure N` / `Fig. N` / `Table N` (including ranges like `Figures 46–50`) and links them **kind-aware** — `Figure 6` and `Table 6` are distinct. This is the only mapping path: free, instant, and accurate for explicit citations.
 4. **Explain figures (optional).** When both `OPENROUTER_API_KEY` and `ENABLE_EXPLANATIONS=true` are set, Meta Muse Ember via OpenRouter writes the **In short** notes — batched 8 figures per call, in parallel, from each caption plus up to three citing paragraphs. Failure-safe: if a batch fails, captions still render. The flag fails closed, so a deploy without it never calls the model.
@@ -40,6 +40,14 @@ Meta Muse Ember (`meta/muse-ember`, 1M-token context) is reached through OpenRou
 - The model is used for figure explanations only; extraction and paragraph→figure mapping are deterministic. (An LLM mapping alternative was measured against regex on a test paper and performed worse — 37 vs 43 mapped paragraphs — so it was removed.)
 - An earlier full-paper reformatting prompt truncated mid-JSON ("Unterminated string") and was replaced by the deterministic extractor.
 - Explanations use small batches (8 figures/call, `max_tokens: 8000`) so reasoning comfortably fits in budget. Tune these in `src/lib/paper.ts`.
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md), or open `/changelog` in the app for the rendered version. Releases follow Semantic Versioning; the changelog is the canonical record and GitHub Releases carry the short release notes.
+
+## Roadmap
+
+See [ROADMAP.md](ROADMAP.md) for the plan covering ar5iv/PDF fallbacks, true PDF-only papers, dragged PDF uploads, accounts, and reading history.
 
 ## Quick start
 
@@ -75,6 +83,25 @@ Deployed on Vercel (Hobby plan). `src/app/api/fetch/route.ts` exports `maxDurati
 2. Optional: **Storage → Marketplace → Upstash Redis** (free tier) to enable the shared cache; the integration injects `KV_REST_API_URL` / `KV_REST_API_TOKEN`.
 3. Optional: set `OPENROUTER_API_KEY` + `ENABLE_EXPLANATIONS=true` for explanations; omit both to keep the deployment deterministic.
 
+## Releases
+
+Paper Reader uses [Semantic Versioning](https://semver.org/):
+
+- **Major**: breaking changes to public URLs, user data, or supported workflows.
+- **Minor**: backward-compatible features.
+- **Patch**: fixes, performance, documentation, and dependency updates.
+
+To cut a release:
+
+1. Add the release’s changes to `CHANGELOG.md` under a new version heading with today’s date.
+2. Bump the version in `package.json` and `package-lock.json`.
+3. Run `npm test`, `npm run lint`, and `npm run build`.
+4. Commit and push, then verify the production deployment.
+5. Create and push an annotated tag: `git tag -a vX.Y.Z -m "Paper Reader vX.Y.Z"` and `git push origin vX.Y.Z`.
+6. Publish a GitHub Release from that tag with concise highlights from the changelog.
+
+The `/changelog` page reads `CHANGELOG.md` at build time; `npm test` checks that the newest released heading matches `package.json`.
+
 ## Analytics
 
 - **Visitors** — Vercel Web Analytics (`@vercel/analytics`, mounted in `src/app/layout.tsx`). Enable it once in the Vercel dashboard under **Analytics**. Hobby includes 50,000 events/month with a 1-month window; custom events require Pro, so this covers page views/visitors/referrers only.
@@ -95,7 +122,7 @@ The response includes `loadsByDay`, `totalLoads`, `cache.hitRate`, `errors`, and
 | `npm run build` | Production build |
 | `npm run start` | Serve the production build |
 | `npm run lint` | Run ESLint |
-| `npm test` | Run the scraper test suite (Vitest) |
+| `npm test` | Run the extraction and changelog test suites (Vitest) |
 | `npm run test:watch` | Run Vitest in watch mode |
 
 ## Testing
@@ -108,6 +135,7 @@ The response includes `loadsByDay`, `totalLoads`, `cache.hitRate`, `errors`, and
 - **Tailwind CSS v4**
 - **Lexend / IBM Plex Sans** — reading and UI typefaces via `next/font`
 - **Cheerio** — server-side HTML parsing
+- **react-markdown** — server-rendered changelog
 - **sanitize-html** — allowlist sanitization of extracted paper markup
 - **KaTeX** — math rendering
 - **Upstash Redis** — shared deployment cache (optional)
@@ -118,5 +146,5 @@ The response includes `loadsByDay`, `totalLoads`, `cache.hitRate`, `errors`, and
 ## Known limitations
 
 - **Rate limiting is per-IP, without accounts.** `/api/fetch` is an unauthenticated proxy to arXiv (and to OpenRouter only when explanations are explicitly enabled). Requests are capped at 20/minute per IP through Upstash when Redis is configured; there is no per-user quota or authentication.
-- **Papers without an arXiv HTML version** return an error with an explanation. This happens with very new submissions (HTML is generated asynchronously) and some older papers; PDF fallback is not implemented.
+- **Papers without arXiv HTML or an ar5iv conversion** return an error with an explanation. This happens with very new submissions and papers without usable TeX source; PDF fallback is not implemented.
 - **Tables render inline as HTML**, not as images — that's by design (there's often no image file in the source), but very wide tables scroll inside their card.

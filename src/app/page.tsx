@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { parseSourceInput, sourcePath } from "@/lib/sources";
 import HomeHeader from "@/components/HomeHeader";
 import Landing from "@/components/Landing";
-import { useDropTarget } from "@/components/dropTarget";
+import SiteFooter from "@/components/SiteFooter";
 
 export default function Home() {
   const router = useRouter();
@@ -50,20 +50,8 @@ export default function Home() {
     window.scrollTo(0, 0);
   }, []);
 
-  const handleDrop = useCallback(
-    (text: string) => {
-      const first = text.trim().split(/\s+/)[0];
-      if (!first) return;
-      setUrl(first);
-      openPaper(first);
-    },
-    [openPaper],
-  );
-
-  const { hovering } = useDropTarget(handleDrop);
-
   return (
-    <div className="min-h-full">
+    <div className="flex min-h-dvh flex-col">
       <HomeHeader
         url={url}
         onUrlChange={changeUrl}
@@ -73,23 +61,10 @@ export default function Home() {
         onHome={goHome}
       />
 
-      <Landing onExample={loadExample} />
-
-      {hovering && (
-        <div
-          aria-hidden="true"
-          className="pointer-events-none fixed inset-0 z-[70] flex items-center justify-center bg-background/60 p-6 backdrop-blur-sm"
-        >
-          <div className="rounded-2xl border-2 border-dashed border-accent bg-surface-raised px-8 py-10 text-center shadow-2xl">
-            <p className="font-reading text-lg font-semibold text-foreground">
-              Drop an arXiv link
-            </p>
-            <p className="mt-1 text-sm text-subtle">
-              We&apos;ll open it in the reader.
-            </p>
-          </div>
-        </div>
-      )}
+      <main className="flex flex-1 flex-col justify-center">
+        <Landing onExample={loadExample} />
+      </main>
+      <SiteFooter />
     </div>
   );
 }

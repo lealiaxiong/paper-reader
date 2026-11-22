@@ -1,6 +1,6 @@
 {
   "name": "paper-reader",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -19,6 +19,7 @@
     "next": "16.4.6",
     "react": "19.3.0",
     "react-dom": "19.3.0",
+    "react-markdown": "^10.1.0",
     "sanitize-html": "2.17.0"
   },
   "devDependencies": {

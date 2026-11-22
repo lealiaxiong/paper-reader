@@ -5,6 +5,139 @@ import type { Figure, Paragraph, ReaderData, ReaderPayload } from "@/lib/types";
 
 const MAX_HTML_BYTES = 5 * 1024 * 1024;
 
+const ARXIV_HTML_BASE = "https://arxiv.org/html/";
+const ARXIV_ID_PATTERN = /^\d{4}\.\d{4,5}$/;
+const LATEXML_PATTERN = /class="[^"]*\bltx_(?:document|page_main|para|p)\b/;
+
+export type HtmlProviderId = "arxiv-html" | "ar5iv";
+
+export interface FetchedPaperHtml {
+  html: string;
+  provider: HtmlProviderId;
+  baseUrl: string;
+}
+
+type HtmlProvider = {
+  id: HtmlProviderId;
+  label: string;
+  baseUrl: string;
+  url: (arxivId: string) => string;
+};
+
+const HTML_PROVIDERS: readonly HtmlProvider[] = [
+  {
+    id: "arxiv-html",
+    label: "arXiv",
+    baseUrl: ARXIV_HTML_BASE,
+    url: (arxivId) => `${ARXIV_HTML_BASE}${arxivId}`,
+  },
+  {
+    id: "ar5iv",
+    label: "ar5iv",
+    baseUrl: "https://ar5iv.arxiv.org/html/",
+    url: (arxivId) => `https://ar5iv.arxiv.org/html/${arxivId}`,
+  },
+];
+
+class ProviderFetchError extends Error {
+  constructor(
+    message: string,
+    readonly canFallback: boolean,
+  ) {
+    super(message);
+  }
+}
+
+async function fetchFromProvider(
+  provider: HtmlProvider,
+  arxivId: string,
+): Promise<FetchedPaperHtml> {
+  let res: Response;
+  try {
+    res = await fetch(provider.url(arxivId), {
+      headers: { "User-Agent": "paper-reader/0.1 (arXiv HTML reader)" },
+      signal: AbortSignal.timeout(30_000),
+    });
+  } catch {
+    throw new ProviderFetchError(`${provider.label} could not be reached`, true);
+  }
+
+  if (res.status === 404) {
+    throw new ProviderFetchError(`${provider.label} has no HTML for this paper`, true);
+  }
+  if (!res.ok) {
+    throw new ProviderFetchError(
+      `${provider.label} returned ${res.status}`,
+      res.status === 408 || res.status === 425 || res.status === 429 || res.status >= 500,
+    );
+  }
+
+  const contentType = res.headers.get("content-type") ?? "";
+  if (contentType && !contentType.toLowerCase().includes("text/html")) {
+    throw new ProviderFetchError(`${provider.label} did not return an HTML page`, true);
+  }
+
+  const declaredLength = Number(res.headers.get("content-length") ?? "0");
+  if (declaredLength > MAX_HTML_BYTES) {
+    throw new ProviderFetchError(
+      `The HTML for arXiv:${arxivId} is too large to process (over 5 MB).`,
+      false,
+    );
+  }
+
+  let bytes: Uint8Array;
+  try {
+    bytes = new Uint8Array(await res.arrayBuffer());
+  } catch {
+    throw new ProviderFetchError(`${provider.label} response could not be read`, true);
+  }
+  if (bytes.byteLength > MAX_HTML_BYTES) {
+    throw new ProviderFetchError(
+      `The HTML for arXiv:${arxivId} is too large to process (over 5 MB).`,
+      false,
+    );
+  }
+
+  const html = new TextDecoder().decode(bytes);
+  if (!html.includes("<html")) {
+    throw new ProviderFetchError(`${provider.label} returned an unexpected response`, true);
+  }
+  if (!LATEXML_PATTERN.test(html)) {
+    throw new ProviderFetchError(`${provider.label} did not return paper content`, true);
+  }
+
+  return { html, provider: provider.id, baseUrl: provider.baseUrl };
+}
+
+/**
+ * Fetch the paper's HTML, preferring arXiv and falling back to ar5iv when
+ * arXiv has no HTML version. ar5iv can return a 200 redirect to the abstract
+ * page when it has no conversion, so a successful status alone is not enough.
+ */
+export async function fetchPaperHtml(arxivId: string): Promise<FetchedPaperHtml> {
+  if (!ARXIV_ID_PATTERN.test(arxivId)) {
+    throw new Error(`Invalid arXiv ID: ${arxivId}`);
+  }
+
+  const failures: string[] = [];
+  for (const provider of HTML_PROVIDERS) {
+    try {
+      return await fetchFromProvider(provider, arxivId);
+    } catch (err) {
+      if (!(err instanceof ProviderFetchError)) throw err;
+      if (!err.canFallback) throw err;
+      failures.push(err.message);
+    }
+  }
+
+  throw new Error(
+    `No HTML version available for arXiv:${arxivId}. The paper may be too new ` +
+      `(arXiv generates HTML asynchronously), lack TeX source, or have no ar5iv ` +
+      `conversion. Please try again later, or use a paper that has an HTML version. ` +
+      `(${failures.join("; ")})`,
+  );
+}
+
 /**
  * Allowlist for paragraph HTML. arXiv HTML is untrusted markup: it is generated
  * from author-controlled LaTeX, so anything that can execute script or leak
@@ -92,55 +225,17 @@ const TABLE_SANITIZE: sanitizeHtml.IOptions = {
   allowProtocolRelative: false,
 };
 
-/**
- * Fetch the arXiv HTML version. A 404 means the paper has no HTML version —
- * common for very recent submissions (arXiv generates HTML asynchronously)
- * and for some older papers. PDF fallback is not yet implemented.
- */
-export async function fetchArxivHtml(arxivId: string): Promise<string> {
-  const url = `https://arxiv.org/html/${arxivId}`;
-  const res = await fetch(url, {
-    headers: { "User-Agent": "paper-reader/0.1 (arXiv HTML reader)" },
-    signal: AbortSignal.timeout(30_000),
-  });
-  if (res.status === 404) {
-    throw new Error(
-      `No HTML version available for arXiv:${arxivId}. This paper may be very new ` +
-        `(arXiv generates HTML asynchronously), or too old to have one. ` +
-        `Please try again later, or use a paper that has an HTML version.`,
-    );
-  }
-  if (!res.ok) {
-    throw new Error(`arXiv returned ${res.status} for ${arxivId}`);
-  }
-  const contentType = res.headers.get("content-type") ?? "";
-  if (contentType && !contentType.toLowerCase().includes("text/html")) {
-    throw new Error(`arXiv did not return an HTML page for ${arxivId}`);
-  }
-  const declaredLength = Number(res.headers.get("content-length") ?? "0");
-  if (declaredLength > MAX_HTML_BYTES) {
-    throw new Error(`The HTML for arXiv:${arxivId} is too large to process (over 5 MB).`);
-  }
-  const bytes = new Uint8Array(await res.arrayBuffer());
-  if (bytes.byteLength > MAX_HTML_BYTES) {
-    throw new Error(`The HTML for arXiv:${arxivId} is too large to process (over 5 MB).`);
-  }
-  const html = new TextDecoder().decode(bytes);
-  if (!html.includes("<html")) {
-    throw new Error(`Unexpected response from arXiv for ${arxivId}`);
-  }
-  return html;
-}
-
-const HTML_BASE = "https://arxiv.org/html/";
-
-/** Resolve a src/data attribute from the arXiv HTML page to an absolute URL. */
-function resolveImageUrl(raw: string | undefined): string | null {
+/** Resolve a src/data attribute against the provider that served the page. */
+function resolveImageUrl(raw: string | undefined, baseUrl: string): string | null {
   if (!raw) return null;
-  if (raw.startsWith("data:") || raw.startsWith("http://") || raw.startsWith("https://")) {
-    return raw;
+  if (raw.startsWith("data:")) return raw;
+  try {
+    const url = new URL(raw, baseUrl);
+    if (url.protocol !== "http:" && url.protocol !== "https:") return null;
+    return url.href;
+  } catch {
+    return null;
   }
-  return HTML_BASE + raw.replace(/^\.\//, "");
 }
 
 /**
@@ -284,11 +379,22 @@ function scholarQueryFromEntry(entry: string): string {
   return `${firstSurname} ${shortTitle} ${year}`.replace(/\s+/g, " ").trim();
 }
 
-export function extractPaper(html: string, arxivId: string): ReaderData {
+function normalizeTitle(rawTitle: string, arxivId: string): string {
+  const title = rawTitle
+    .replace(/^\[\s*(?:arXiv:)?\d{4}\.\d{4,5}(?:v\d+)?\s*\]\s*/i, "")
+    .replace(/\s*[-–—]\s*(?:arXiv|ar5iv).*$/i, "")
+    .trim();
+  return title || `arXiv:${arxivId}`;
+}
+
+export function extractPaper(
+  html: string,
+  arxivId: string,
+  baseUrl = ARXIV_HTML_BASE,
+): ReaderData {
   const $ = cheerio.load(html);
 
-  const rawTitle = $("title").text().trim();
-  const title = (rawTitle.replace(/\s*[-–—]\s*arXiv.*$/i, "") || `arXiv:${arxivId}`).trim();
+  const title = normalizeTitle($("title").text().trim(), arxivId);
 
   // --- Authors: .ltx_personname elements in the title block ---
   // Footnote/affiliation notes (e.g. "11footnotemark: 1") are nested inside
@@ -411,7 +517,7 @@ export function extractPaper(html: string, arxivId: string): ReaderData {
       // the merged figure has none yet. Caption differences for panels are
       // ignored (they describe the same figure/table).
       if (!existing.imageUrl && raw) {
-        existing.imageUrl = resolveImageUrl(raw);
+        existing.imageUrl = resolveImageUrl(raw, baseUrl);
         existing.tableHtml = null; // image wins over table
       } else if (!existing.tableHtml && tableHtml) {
         existing.tableHtml = tableHtml;
@@ -424,7 +530,7 @@ export function extractPaper(html: string, arxivId: string): ReaderData {
         label,
         number,
         kind,
-        imageUrl: resolveImageUrl(raw),
+        imageUrl: resolveImageUrl(raw, baseUrl),
         tableHtml,
       });
     }
@@ -631,8 +737,12 @@ export async function buildFigureExplanations(
 }
 
 /** Full pipeline: extract paper, map via regex, attach explanations. */
-export async function processPaper(arxivId: string, html: string): Promise<ReaderData> {
-  const paper = extractPaper(html, arxivId);
+export async function processPaper(
+  arxivId: string,
+  html: string,
+  baseUrl = ARXIV_HTML_BASE,
+): Promise<ReaderData> {
+  const paper = extractPaper(html, arxivId, baseUrl);
 
   // Regex mapping — free, instant, deterministic, and more accurate than
   // the LLM for explicit citations on the one paper we measured (43 vs 37).

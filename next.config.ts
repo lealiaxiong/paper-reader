@@ -7,7 +7,7 @@ const csp = [
   // Next.js needs inline bootstrap scripts; dev additionally needs eval for HMR.
   `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: https://arxiv.org",
+  "img-src 'self' data: https://arxiv.org https://ar5iv.arxiv.org https://ar5iv.labs.arxiv.org",
   "font-src 'self' data:",
   "connect-src 'self'",
   "frame-ancestors 'none'",

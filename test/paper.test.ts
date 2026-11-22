@@ -1,9 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { gunzipSync } from "node:zlib";
 import {
   buildRegexFigureMap,
   extractPaper,
+  fetchPaperHtml,
   toClientPayload,
 } from "@/lib/paper";
 import {
@@ -25,6 +26,24 @@ function loadFixture(name: string): string {
   const url = new URL(`./fixtures/${name}`, import.meta.url);
   return gunzipSync(readFileSync(url)).toString("utf8");
 }
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
+function htmlResponse(html: string, status = 200): Response {
+  return new Response(html, {
+    status,
+    headers: { "content-type": "text/html; charset=utf-8" },
+  });
+}
+
+const ar5ivHtml = `<!doctype html><html><head>
+<title>[0704.0028] Pfaffians, hafnians and products of real linear functionals</title>
+</head><body><article class="ltx_document">
+<p class="ltx_p">The identity <math alttext="x^2"><annotation encoding="application/x-tex">x^2</annotation></math> holds.</p>
+<figure><figcaption>Figure 1: A relative image.</figcaption><img src="/html/0704.0028/assets/f1.png"></figure>
+</article></body></html>`;
 
 let instructgpt: ReaderData | undefined;
 function ig(): ReaderData {
@@ -109,6 +128,65 @@ describe("source references", () => {
     });
     expect(parseSourceId("arxiv", "https://arxiv.org/abs/2401.12345")).toBeNull();
     expect(parseSourceId("unknown", "2401.12345")).toBeNull();
+  });
+});
+
+describe("fetchPaperHtml", () => {
+  it("uses arXiv HTML when available and never requests ar5iv", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(htmlResponse(ar5ivHtml));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const paper = await fetchPaperHtml("0704.0028");
+
+    expect(paper.provider).toBe("arxiv-html");
+    expect(paper.baseUrl).toBe("https://arxiv.org/html/");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("falls back to ar5iv when arXiv has no HTML", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(null, { status: 404 }))
+      .mockResolvedValueOnce(htmlResponse(ar5ivHtml));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const fetched = await fetchPaperHtml("0704.0028");
+    expect(fetched.provider).toBe("ar5iv");
+    expect(fetched.baseUrl).toBe("https://ar5iv.arxiv.org/html/");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    const paper = extractPaper(fetched.html, "0704.0028", fetched.baseUrl);
+    expect(paper.title).toBe(
+      "Pfaffians, hafnians and products of real linear functionals",
+    );
+    expect(paper.paragraphs[0].mathTex).toEqual(["x^2"]);
+    expect(paper.figures[0].imageUrl).toBe(
+      "https://ar5iv.arxiv.org/html/0704.0028/assets/f1.png",
+    );
+  });
+
+  it("rejects ar5iv redirects to an abstract page with no paper content", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(null, { status: 404 }))
+      .mockResolvedValueOnce(
+        htmlResponse("<html><head><title>No content available</title></head></html>"),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(fetchPaperHtml("0704.0028")).rejects.toThrow(
+      /No HTML version available for arXiv:0704\.0028/,
+    );
+  });
+
+  it("does not try providers for an invalid arXiv ID", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(fetchPaperHtml("hep-th/9901001")).rejects.toThrow(
+      "Invalid arXiv ID",
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });
 
