@@ -1,0 +1,13 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "paper-reader": {
+      "type": "local",
+      "command": ["npx", "-y", "paper-reader-mcp"],
+      "environment": {
+        "PAPER_READER_URL": "https://paper-reader.example",
+        "PAPER_READER_TOKEN": "{env:PAPER_READER_TOKEN}"
+      }
+    }
+  }
+}

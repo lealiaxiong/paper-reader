@@ -1,0 +1,26 @@
+{
+  "arxivId": "2401.01234",
+  "title": "Invented example with math and a vector figure",
+  "authors": ["Jane Example", "Alex Sample"],
+  "paragraphs": [
+    {
+      "id": "p1",
+      "text": "The loss falls from 0.90 to 0.42 as shown in Figure 1.",
+      "html": "The loss falls from 0.90 to @@K0@@ as shown in <b>Figure 1</b>.",
+      "mathTex": ["0.42"]
+    }
+  ],
+  "figures": [
+    {
+      "id": "f1",
+      "label": "Figure 1",
+      "number": 1,
+      "kind": "figure",
+      "caption": "Figure 1: Training loss by epoch.",
+      "pdfPage": 2,
+      "bbox": [0.12, 0.18, 0.76, 0.52]
+    }
+  ],
+  "paraFigureMap": { "p1": ["f1"] },
+  "client": { "name": "opencode", "model": "model-name", "skillVersion": "0.1.0" }
+}

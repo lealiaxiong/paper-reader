@@ -90,6 +90,16 @@ never write `paper:*`. Figures may use `tableHtml` or `pdfPage`/`bbox`;
 `DELETE` requires the owning publisher or `ADMIN_TOKEN`. See
 [`docs/handoff-api.md`](./docs/handoff-api.md).
 
+### OpenCode skill and MCP
+
+The repository ships a local MCP server in `mcp/` and an OpenCode skill in
+`.opencode/skills/paper-reader/`. The server exposes `paper_format` and
+`publish_paper`; the skill uses native `read` for PDFs and falls back to
+`scripts/crop-figures.mjs` for page rasters. Build the server with
+`npm --prefix mcp run build`, then add it to `opencode.json` as in
+`mcp/README.md`. `publish_explanations` is documented but not exported until
+the server overlay endpoint lands.
+
 ## Deployment
 
 Deployed on Vercel (Hobby plan). `src/app/api/fetch/route.ts` exports `maxDuration = 60` (mirrored in `vercel.json`) so explanation batches fit on large papers.

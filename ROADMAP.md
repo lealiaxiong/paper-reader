@@ -281,6 +281,12 @@ server; handoff links leaking or expiring mid-read.
 
 ### M3 — OpenCode skill plus local MCP
 
+**Status:** Partial: `paper-reader-mcp` stdio service with `paper_format` and
+`publish_paper`, the OpenCode skill, and rasterization helper are shipped.
+`publish_explanations` remains a documented placeholder until the server
+overlay endpoint exists; `pdfPage`/`bbox` figures carry captions until the
+M5 renderer lands.
+
 **Goal:** A developer can point OpenCode at a PDF-only arXiv paper and get a
 working reader URL, with no account.
 
