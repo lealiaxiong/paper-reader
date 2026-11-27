@@ -18,14 +18,32 @@ import ReaderToolbar from "./ReaderToolbar";
 type Props = {
   source: SourceId;
   sourceId: string;
+  handoffSlug?: string;
 };
 
-export default function ReaderView({ source, sourceId }: Props) {
+function errorMessage(json: unknown, fallback: string): string {
+  if (json && typeof json === "object" && "error" in json) {
+    const error = (json as { error?: unknown }).error;
+    if (typeof error === "string") return error;
+    if (
+      error &&
+      typeof error === "object" &&
+      "message" in error &&
+      typeof (error as { message?: unknown }).message === "string"
+    ) {
+      return (error as { message: string }).message;
+    }
+  }
+  return fallback;
+}
+
+export default function ReaderView({ source, sourceId, handoffSlug }: Props) {
   const router = useRouter();
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<ReaderPayload | null>(null);
+  const [handoffExpiresAt, setHandoffExpiresAt] = useState<string | null>(null);
   const [activeParaId, setActiveParaId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -34,19 +52,46 @@ export default function ReaderView({ source, sourceId }: Props) {
 
     (async () => {
       try {
-        const res = await fetch("/api/fetch", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ source, id: sourceId }),
-          signal: controller.signal,
-        });
-        const json = await res.json();
+        const res = handoffSlug
+          ? await fetch(`/api/handoff/${encodeURIComponent(handoffSlug)}`, {
+              headers: { Accept: "application/json" },
+              signal: controller.signal,
+            })
+          : await fetch("/api/fetch", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ source, id: sourceId }),
+              signal: controller.signal,
+            });
+
+        let json: unknown;
+        try {
+          json = await res.json();
+        } catch {
+          throw new Error(`Request failed (${res.status})`);
+        }
+
         if (!res.ok) {
-          throw new Error(json.error ?? `Request failed (${res.status})`);
+          throw new Error(errorMessage(json, `Request failed (${res.status})`));
         }
-        if (!controller.signal.aborted) {
-          setData(json.data as ReaderPayload);
+        if (controller.signal.aborted) return;
+
+        const payload = json as {
+          data?: ReaderPayload;
+          arxivId?: string;
+          expiresAt?: string;
+        };
+
+        if (handoffSlug) {
+          if (payload.arxivId !== sourceId) {
+            throw new Error("This handoff is for a different paper.");
+          }
+          if (!payload.data) throw new Error("The handoff is empty.");
+          setHandoffExpiresAt(payload.expiresAt ?? null);
         }
+
+        if (!payload.data) throw new Error("The paper payload is missing.");
+        setData(payload.data);
       } catch (err) {
         if (controller.signal.aborted) return;
         setError(err instanceof Error ? err.message : "Network error");
@@ -57,7 +102,7 @@ export default function ReaderView({ source, sourceId }: Props) {
     })();
 
     return () => controller.abort();
-  }, [source, sourceId]);
+  }, [source, sourceId, handoffSlug]);
 
   const changeUrl = useCallback((value: string) => {
     setUrl(value);
@@ -162,6 +207,7 @@ export default function ReaderView({ source, sourceId }: Props) {
         loading={loading}
         error={error}
         onHome={goHome}
+        handoffExpiresAt={handoffExpiresAt}
       />
 
       <main

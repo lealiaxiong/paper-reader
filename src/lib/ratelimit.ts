@@ -16,6 +16,19 @@ export const fetchLimiter = redis
     })
   : null;
 
+/**
+ * Per-publisher + per-IP limit for BYOM publishes and explanation writes.
+ * Each request stores model output and may call the arXiv metadata API, so
+ * bursts are capped independently of the reader fetch limit.
+ */
+export const publishLimiter = redis
+  ? new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(20, "1 m"),
+      prefix: `ratelimit:${process.env.VERCEL_ENV ?? "local"}:publish`,
+    })
+  : null;
+
 /** Client IP behind the Vercel proxy, with conservative fallbacks. */
 export function clientIp(req: NextRequest): string {
   return (

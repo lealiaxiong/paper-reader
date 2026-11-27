@@ -19,6 +19,7 @@ type Props = {
   loading: boolean;
   error: string | null;
   onHome: () => void;
+  handoffExpiresAt?: string | null;
 };
 
 /**
@@ -33,11 +34,16 @@ export default function ReaderToolbar({
   loading,
   error,
   onHome,
+  handoffExpiresAt,
 }: Props) {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const paperRef = { source: data.source, id: data.sourceId };
+  const isByom = data.provenance === "byom";
+  const expiryLabel = handoffExpiresAt
+    ? `${new Date(handoffExpiresAt).toISOString().replace("T", " ").slice(0, 16)} UTC`
+    : null;
 
   const close = useCallback((returnFocus = false) => {
     setOpen(false);
@@ -81,7 +87,7 @@ export default function ReaderToolbar({
           >
             {data.title}
           </p>
-          <p className="mt-0.5 text-[11px] leading-none text-subtle">
+          <p className="mt-0.5 flex items-center gap-1.5 text-[11px] leading-none text-subtle">
             <a
               href={sourceExternalUrl(paperRef)}
               target="_blank"
@@ -91,6 +97,18 @@ export default function ReaderToolbar({
             >
               {sourceCitation(paperRef)}
             </a>
+            {isByom && (
+              <span
+                className="rounded-full border border-accent/30 bg-accent/10 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide text-accent-strong"
+                title={
+                  expiryLabel
+                    ? `Extracted by your own model. Link expires ${expiryLabel}.`
+                    : "Extracted by your own model."
+                }
+              >
+                Your model
+              </span>
+            )}
           </p>
         </div>
 

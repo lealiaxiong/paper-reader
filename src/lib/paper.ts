@@ -139,12 +139,74 @@ export async function fetchPaperHtml(arxivId: string): Promise<FetchedPaperHtml>
 }
 
 /**
+ * Probe whether deterministic HTML exists without downloading the whole page.
+ * A 200 from ar5iv can be an abstract page when there is no conversion, so the
+ * first chunk must contain LaTeXML markup. Network failures count as "no HTML"
+ * (the caller may still accept a BYOM payload).
+ */
+export async function probePaperHtml(arxivId: string): Promise<{
+  available: boolean;
+  provider?: HtmlProviderId;
+}> {
+  if (!ARXIV_ID_PATTERN.test(arxivId)) return { available: false };
+
+  for (const provider of HTML_PROVIDERS) {
+    let res: Response;
+    try {
+      res = await fetch(provider.url(arxivId), {
+        headers: { "User-Agent": "paper-reader/0.1 (arXiv HTML reader)" },
+        redirect: "follow",
+        signal: AbortSignal.timeout(10_000),
+      });
+    } catch {
+      continue;
+    }
+
+    const contentType = (res.headers.get("content-type") ?? "").toLowerCase();
+    const redirectedToAbstract =
+      provider.id === "ar5iv" && /\/abs\//.test(res.url);
+
+    if (
+      !res.ok ||
+      (contentType && !contentType.includes("text/html")) ||
+      redirectedToAbstract
+    ) {
+      await res.body?.cancel();
+      continue;
+    }
+
+    const reader = res.body?.getReader();
+    if (!reader) continue;
+
+    const decoder = new TextDecoder();
+    let prefix = "";
+    try {
+      while (prefix.length < 64 * 1024) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        prefix += decoder.decode(value, { stream: true });
+      }
+    } catch {
+      await reader.cancel();
+      continue;
+    }
+    await reader.cancel();
+
+    if (LATEXML_PATTERN.test(prefix)) {
+      return { available: true, provider: provider.id };
+    }
+  }
+
+  return { available: false };
+}
+
+/**
  * Allowlist for paragraph HTML. arXiv HTML is untrusted markup: it is generated
  * from author-controlled LaTeX, so anything that can execute script or leak
  * data must be stripped before it reaches dangerouslySetInnerHTML.
  * No styles, no ids, no event handlers, only http(s)/mailto links.
  */
-const PARAGRAPH_SANITIZE: sanitizeHtml.IOptions = {
+export const PARAGRAPH_SANITIZE: sanitizeHtml.IOptions = {
   allowedTags: ["a", "b", "i", "em", "strong", "cite", "sub", "sup", "code", "span", "br"],
   allowedAttributes: {
     a: ["href", "title", "target", "rel"],
@@ -161,7 +223,7 @@ const PARAGRAPH_SANITIZE: sanitizeHtml.IOptions = {
  * formulas), and the inline styles LaTeXML uses for layout — widths, padding,
  * font sizes — with values constrained so no script/url() can sneak in.
  */
-const TABLE_SANITIZE: sanitizeHtml.IOptions = {
+export const TABLE_SANITIZE: sanitizeHtml.IOptions = {
   allowedTags: [
     "table", "thead", "tbody", "tfoot", "tr", "th", "td", "caption", "colgroup", "col",
     "span", "a", "b", "i", "em", "strong", "cite", "sub", "sup", "code", "br",

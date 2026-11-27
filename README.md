@@ -74,6 +74,21 @@ All optional — without any of them the app runs fully deterministically with a
 | `KV_REST_API_URL` / `KV_REST_API_TOKEN` | Injected by the Vercel Marketplace Upstash integration; ignored outside Vercel so local dev never shares the production database |
 | `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | Optional: separate Upstash database for local dev (takes precedence over `KV_*` everywhere) |
 | `STATS_TOKEN` | Bearer token that protects `GET /api/stats` |
+| `PUBLISH_TOKENS` | Comma-separated bearer tokens for BYOM publishing; each is a publisher identity. Publishing is disabled when empty |
+| `ADMIN_TOKEN` | Optional bearer token for `DELETE /api/handoff/<slug>` takedowns |
+| `HANDOFF_TTL_SECONDS` | Optional BYOM handoff lifetime (default 6h; clamped 1h–24h) |
+
+### BYOM handoff (beta)
+
+Agents can publish a validated reader payload for a PDF-only arXiv paper without
+server-side PDF parsing. `POST /api/publish` (bearer `PUBLISH_TOKENS`) sanitizes
+the payload, refuses when deterministic HTML/ar5iv exists, checks title/authors
+against the arXiv metadata API, and returns `/read/arxiv/<id>?h=<slug>`. Handoffs
+live in Redis (or the in-memory fallback in dev) for `HANDOFF_TTL_SECONDS` and
+never write `paper:*`. Figures may use `tableHtml` or `pdfPage`/`bbox`;
+`imageUrl` is rejected in v1. `GET /api/handoff/<slug>` reads a handoff, and
+`DELETE` requires the owning publisher or `ADMIN_TOKEN`. See
+[`docs/handoff-api.md`](./docs/handoff-api.md).
 
 ## Deployment
 
