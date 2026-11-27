@@ -74,18 +74,9 @@ export default function PdfOnlyDocsPage() {
             can&apos;t build a reading view for them.
           </p>
           <p className="mt-3 max-w-xl rounded-xl border border-border bg-surface-raised px-4 py-3 text-[15px] leading-relaxed text-muted">
-            To read it right now, open the original PDF at{" "}
-            <a
-              href="https://arxiv.org/pdf/2512.00010"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-accent underline decoration-accent/40 underline-offset-2 hover:text-accent-strong"
-            >
-              arxiv.org/pdf/&lt;id&gt;
-            </a>
-            . If you use an AI coding assistant (for example OpenCode), the
-            steps below publish a short-lived Paper Reader reading link using
-            your model.
+            Some arXiv papers are PDF-only. Paper Reader can still read them:
+            your agent opens the PDF and publishes a short-lived reading link
+            using your model.
           </p>
         </header>
 
@@ -114,7 +105,8 @@ export default function PdfOnlyDocsPage() {
                 <Code>Publisher token</Code> below).
               </span>,
               <span key="d">
-                The paper PDF, downloaded from arXiv or already on your disk.
+                Permission for the agent to download the arXiv PDF when it
+                needs it.
               </span>,
             ]}
           />
@@ -224,10 +216,6 @@ curl -X POST "$PAPER_READER_URL/api/publish" \\
               <span key="html">
                 <Code>409 HTML_AVAILABLE</Code>: open the normal Paper Reader
                 page for that arXiv ID instead.
-              </span>,
-              <span key="pdf">
-                Just need the PDF: open{" "}
-                <Code>https://arxiv.org/pdf/&lt;id&gt;</Code> directly.
               </span>,
             ]}
           />
