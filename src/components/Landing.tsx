@@ -2,6 +2,8 @@ type Props = {
   onExample: (url: string) => void;
 };
 
+import Link from "next/link";
+
 const EXAMPLES = [
   { title: "Attention Is All You Need", id: "1706.03762" },
   { title: "InstructGPT", id: "2203.02155" },
@@ -42,6 +44,16 @@ export default function Landing({ onExample }: Props) {
                 </button>
               ))}
             </div>
+            <p className="mt-4 text-[13px] text-subtle">
+              Paper only available as a PDF?{" "}
+              <Link
+                href="/docs/pdf-only"
+                className="text-accent underline decoration-accent/40 underline-offset-2 hover:text-accent-strong"
+              >
+                Read it with your own model
+              </Link>
+              .
+            </p>
           </div>
         </div>
 

@@ -9,12 +9,6 @@ export default function SiteFooter() {
           <p>Paper Reader v{packageJson.version}</p>
           <nav aria-label="Project links" className="flex items-center gap-4">
             <Link
-              href="/docs/pdf-only"
-              className="transition-colors hover:text-foreground"
-            >
-              PDF-only papers
-            </Link>
-            <Link
               href="/changelog"
               className="transition-colors hover:text-foreground"
             >

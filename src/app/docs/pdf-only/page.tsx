@@ -66,22 +66,20 @@ export default function PdfOnlyDocsPage() {
 
         <Section title="What you get">
           <p>
-            You provide a <Code>PUBLISH_TOKENS</Code>-backed publisher token. The
-            server validates and sanitizes the JSON your agent produces, checks
-            the title and authors against arXiv metadata, and returns an
-            unlisted link such as <Code>/read/arxiv/2512.00010?h=&lt;slug&gt;</Code>.
+            Your agent reads the PDF and sends Paper Reader a JSON payload. The
+            server checks it, validates it against the arXiv record, and returns
+            a private reader link (for example{" "}
+            <Code>/read/arxiv/2512.00010?h=&lt;slug&gt;</Code>) that works for
+            about six hours.
           </p>
           <p>
-            Handoffs are ephemeral: they expire after{" "}
-            <Code>HANDOFF_TTL_SECONDS</Code> (default six hours) and never write
-            to the deterministic <Code>paper:*</Code> cache. Figures may use{" "}
-            <Code>tableHtml</Code> or <Code>pdfPage</Code>/<Code>bbox</Code>;{" "}
-            <Code>imageUrl</Code> is rejected. PDF figure rendering is coming
-            with M5; captions work today.
+            Each publish requires a publisher token set by the Paper Reader
+            operator. If you use the bundled MCP, that token is already in your
+            <Code>opencode.json</Code>.
           </p>
         </Section>
 
-        <Section title="Fastest path: OpenCode">
+        <Section title="Agent-assisted reading (OpenCode)">
           <p>
             Build the local MCP server and add it to <Code>opencode.json</Code>,
             then install the skill in <Code>.opencode/skills/paper-reader/</Code>.
@@ -107,7 +105,7 @@ export default function PdfOnlyDocsPage() {
           </p>
         </Section>
 
-        <Section title="Manual publishing">
+        <Section title="Calling the API yourself">
           <p>
             Engineers can call the API directly. The payload must look like{" "}
             <Code>paper_format</Code> returns. Successful responses carry{" "}

@@ -14,6 +14,7 @@ import FigureSlot from "./FigureSlot";
 import HomeHeader from "./HomeHeader";
 import ReaderBody from "./ReaderBody";
 import ReaderToolbar from "./ReaderToolbar";
+import SiteFooter from "./SiteFooter";
 
 type Props = {
   source: SourceId;
@@ -224,7 +225,7 @@ export default function ReaderView({ source, sourceId, handoffSlug }: Props) {
   }
 
   return (
-    <div className="min-h-full">
+    <div className="flex min-h-full flex-col">
       <a
         href="#paper"
         className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-3 focus:z-50 focus:rounded-lg focus:border focus:border-border focus:bg-surface-raised focus:px-3 focus:py-2 focus:text-sm focus:text-foreground focus:shadow-lg"
@@ -268,6 +269,7 @@ export default function ReaderView({ source, sourceId, handoffSlug }: Props) {
           activeFigureIds={activeFigureIds}
         />
       </main>
+      <SiteFooter />
     </div>
   );
 }
