@@ -174,6 +174,19 @@ export default function ReaderView({ source, sourceId, handoffSlug }: Props) {
             <p className="font-reading text-lg font-semibold text-foreground">
               We couldn&apos;t open this paper.
             </p>
+            {error?.includes("No HTML reader is available") && (
+              <p className="mx-auto mt-3 max-w-md rounded-xl border border-border bg-surface-raised px-4 py-3 text-sm leading-relaxed text-muted">
+                This paper is likely PDF-only. You can still read it with your
+                own model using the OpenCode skill and local MCP.{" "}
+                <Link
+                  href="/docs/pdf-only"
+                  className="text-accent underline decoration-accent/40 underline-offset-2 hover:text-accent-strong"
+                >
+                  Read the PDF-only guide
+                </Link>
+                .
+              </p>
+            )}
             <p className="mt-2 text-sm leading-relaxed text-subtle">
               Try another link above, or{" "}
               <Link

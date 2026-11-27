@@ -175,7 +175,7 @@ describe("fetchPaperHtml", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     await expect(fetchPaperHtml("0704.0028")).rejects.toThrow(
-      /No HTML version available for arXiv:0704\.0028/,
+      /No HTML reader is available for arXiv:0704\.0028/,
     );
   });
 

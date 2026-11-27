@@ -48,6 +48,20 @@ class ProviderFetchError extends Error {
   }
 }
 
+export class PaperHtmlUnavailableError extends Error {
+  readonly code = "NO_HTML_AVAILABLE";
+  readonly docUrl = "/docs/pdf-only";
+
+  constructor(readonly arxivId: string) {
+    super(
+      `No HTML reader is available for arXiv:${arxivId}. This paper is likely PDF-only. ` +
+        `Use the OpenCode skill and local MCP to publish it with your own model. ` +
+        `Docs: ${"/docs/pdf-only"}.`,
+    );
+    this.name = "PaperHtmlUnavailableError";
+  }
+}
+
 async function fetchFromProvider(
   provider: HtmlProvider,
   arxivId: string,
@@ -130,12 +144,7 @@ export async function fetchPaperHtml(arxivId: string): Promise<FetchedPaperHtml>
     }
   }
 
-  throw new Error(
-    `No HTML version available for arXiv:${arxivId}. The paper may be too new ` +
-      `(arXiv generates HTML asynchronously), lack TeX source, or have no ar5iv ` +
-      `conversion. Please try again later, or use a paper that has an HTML version. ` +
-      `(${failures.join("; ")})`,
-  );
+  throw new PaperHtmlUnavailableError(arxivId);
 }
 
 /**
