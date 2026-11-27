@@ -20,6 +20,8 @@ type Props = {
   error: string | null;
   onHome: () => void;
   handoffExpiresAt?: string | null;
+  handoffCreatedAt?: string | null;
+  client?: { name?: string; model?: string; skillVersion?: string } | null;
 };
 
 /**
@@ -35,15 +37,28 @@ export default function ReaderToolbar({
   error,
   onHome,
   handoffExpiresAt,
+  handoffCreatedAt,
+  client,
 }: Props) {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const paperRef = { source: data.source, id: data.sourceId };
   const isByom = data.provenance === "byom";
+  const modelLabel = client?.model?.trim() || client?.name?.trim() || null;
   const expiryLabel = handoffExpiresAt
     ? `${new Date(handoffExpiresAt).toISOString().replace("T", " ").slice(0, 16)} UTC`
     : null;
+  const createdLabel = handoffCreatedAt
+    ? `${new Date(handoffCreatedAt).toISOString().replace("T", " ").slice(0, 16)} UTC`
+    : null;
+  const byomTitle = [
+    modelLabel ? `Produced by ${modelLabel}` : "Produced by your own model",
+    createdLabel ? `Published ${createdLabel}` : null,
+    expiryLabel ? `Expires ${expiryLabel}` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   const close = useCallback((returnFocus = false) => {
     setOpen(false);
@@ -99,14 +114,10 @@ export default function ReaderToolbar({
             </a>
             {isByom && (
               <span
-                className="rounded-full border border-accent/30 bg-accent/10 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide text-accent-strong"
-                title={
-                  expiryLabel
-                    ? `Extracted by your own model. Link expires ${expiryLabel}.`
-                    : "Extracted by your own model."
-                }
+                className="max-w-40 truncate rounded-full border border-accent/30 bg-accent/10 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide text-accent-strong"
+                title={byomTitle}
               >
-                Your model
+                {modelLabel || "Your model"}
               </span>
             )}
           </p>

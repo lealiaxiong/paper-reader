@@ -61,6 +61,8 @@ export async function GET(
       provenance: "byom",
       arxivId: record.arxivId,
       expiresAt: new Date(record.expiresAt).toISOString(),
+      createdAt: new Date(record.createdAt).toISOString(),
+      ...(record.client ? { client: record.client } : {}),
     },
     { headers: NO_STORE },
   );

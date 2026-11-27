@@ -57,6 +57,12 @@ export default function ReaderView({ source, sourceId, handoffSlug }: Props) {
   const [errorArxivId, setErrorArxivId] = useState<string | null>(null);
   const [data, setData] = useState<ReaderPayload | null>(null);
   const [handoffExpiresAt, setHandoffExpiresAt] = useState<string | null>(null);
+  const [handoffCreatedAt, setHandoffCreatedAt] = useState<string | null>(null);
+  const [handoffClient, setHandoffClient] = useState<{
+    name?: string;
+    model?: string;
+    skillVersion?: string;
+  } | null>(null);
   const [activeParaId, setActiveParaId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -99,6 +105,12 @@ export default function ReaderView({ source, sourceId, handoffSlug }: Props) {
           data?: ReaderPayload;
           arxivId?: string;
           expiresAt?: string;
+          createdAt?: string;
+          client?: {
+            name?: string;
+            model?: string;
+            skillVersion?: string;
+          };
         };
 
         if (handoffSlug) {
@@ -107,6 +119,8 @@ export default function ReaderView({ source, sourceId, handoffSlug }: Props) {
           }
           if (!payload.data) throw new Error("The handoff is empty.");
           setHandoffExpiresAt(payload.expiresAt ?? null);
+          setHandoffCreatedAt(payload.createdAt ?? null);
+          setHandoffClient(payload.client ?? null);
         }
 
         if (!payload.data) throw new Error("The paper payload is missing.");
@@ -160,6 +174,7 @@ export default function ReaderView({ source, sourceId, handoffSlug }: Props) {
   );
 
   if (!data) {
+    const showExpired = Boolean(handoffSlug) && !loading;
     return (
       <div className="min-h-full">
         <HomeHeader
@@ -169,7 +184,7 @@ export default function ReaderView({ source, sourceId, handoffSlug }: Props) {
             openPaper();
           }}
           loading={loading}
-          error={error}
+          error={showExpired ? null : error}
           onHome={goHome}
         />
         {loading ? (
@@ -193,20 +208,48 @@ export default function ReaderView({ source, sourceId, handoffSlug }: Props) {
         ) : (
           <div className="mx-auto max-w-[650px] px-4 py-24 text-center">
             <p className="font-reading text-lg font-semibold text-foreground">
-              We couldn&apos;t open this paper.
+              {handoffSlug
+                ? "This handoff link has expired."
+                : "We couldn't open this paper."}
             </p>
-            {errorCode === "NO_HTML_AVAILABLE" && errorArxivId && (
-              <p className="mx-auto mt-3 max-w-md rounded-xl border border-border bg-surface-raised px-4 py-3 text-sm leading-relaxed text-muted">
-                arXiv:{errorArxivId} appears to be PDF-only. It can still be
-                read with your own model.{" "}
-                <Link
-                  href="/docs/pdf-only"
-                  className="text-accent underline decoration-accent/40 underline-offset-2 hover:text-accent-strong"
-                >
-                  Read the PDF-only guide
-                </Link>
-                .
-              </p>
+            {handoffSlug ? (
+              <div className="mx-auto mt-3 max-w-md rounded-xl border border-border bg-surface-raised px-4 py-3 text-sm leading-relaxed text-muted">
+                <p>
+                  BYOM links are private and short-lived. Re-run your agent to
+                  publish a new one for arXiv:{sourceId}.
+                </p>
+                <p className="mt-3 flex flex-wrap items-center justify-center gap-3">
+                  <Link
+                    href="/docs/pdf-only"
+                    className="inline-flex items-center rounded-full border border-accent/30 bg-accent px-4 py-2 font-medium text-white transition-colors hover:bg-accent-strong"
+                  >
+                    Publish a new link
+                  </Link>
+                  <a
+                    href={`https://arxiv.org/pdf/${sourceId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-accent underline decoration-accent/40 underline-offset-2 hover:text-accent-strong"
+                  >
+                    Open the original PDF
+                  </a>
+                </p>
+              </div>
+            ) : (
+              errorCode === "NO_HTML_AVAILABLE" &&
+              errorArxivId && (
+                <p className="mx-auto mt-3 max-w-md rounded-xl border border-border bg-surface-raised px-4 py-3 text-sm leading-relaxed text-muted">
+                  arXiv:{errorArxivId} appears to be PDF-only. It can still be
+                  read with your own model.{" "}
+                  <Link
+                    href="/docs/pdf-only"
+                    className="text-accent underline decoration-accent/40 underline-offset-2 hover:text-accent-strong"
+                  >
+                    Read the PDF-only guide
+                  </Link>
+                  .
+                </p>
+              )
             )}
             <p className="mt-2 text-sm leading-relaxed text-subtle">
               Try another link above, or{" "}
@@ -242,6 +285,8 @@ export default function ReaderView({ source, sourceId, handoffSlug }: Props) {
         error={error}
         onHome={goHome}
         handoffExpiresAt={handoffExpiresAt}
+        handoffCreatedAt={handoffCreatedAt}
+        client={handoffClient}
       />
 
       <main
