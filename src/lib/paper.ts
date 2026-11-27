@@ -53,11 +53,7 @@ export class PaperHtmlUnavailableError extends Error {
   readonly docUrl = "/docs/pdf-only";
 
   constructor(readonly arxivId: string) {
-    super(
-      `No HTML reader is available for arXiv:${arxivId}. This paper is likely PDF-only. ` +
-        `Use the OpenCode skill and local MCP to publish it with your own model. ` +
-        `Docs: ${"/docs/pdf-only"}.`,
-    );
+    super(`No HTML reader is available for arXiv:${arxivId}.`);
     this.name = "PaperHtmlUnavailableError";
   }
 }

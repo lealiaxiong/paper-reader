@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCached, setCached } from "@/lib/cache";
-import { toClientPayload } from "@/lib/paper";
+import { PaperHtmlUnavailableError, toClientPayload } from "@/lib/paper";
 import { clientIp, fetchLimiter } from "@/lib/ratelimit";
 import { loadSourcePaper } from "@/lib/source-loader";
 import { parseSourceId, type SourceRef } from "@/lib/sources";
@@ -86,6 +86,19 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     await recordError();
     const message = err instanceof Error ? err.message : "Unexpected error";
+    if (err instanceof PaperHtmlUnavailableError) {
+      return NextResponse.json(
+        {
+          error: {
+            code: err.code,
+            message,
+            docUrl: err.docUrl,
+            arxivId: err.arxivId,
+          },
+        },
+        { status: 404 },
+      );
+    }
     return NextResponse.json({ error: message }, { status: 502 });
   }
 }

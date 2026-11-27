@@ -21,20 +21,30 @@ type Props = {
   handoffSlug?: string;
 };
 
-function errorMessage(json: unknown, fallback: string): string {
+function readApiError(json: unknown): {
+  message: string;
+  code: string | null;
+  docUrl: string | null;
+  arxivId: string | null;
+} {
   if (json && typeof json === "object" && "error" in json) {
     const error = (json as { error?: unknown }).error;
-    if (typeof error === "string") return error;
-    if (
-      error &&
-      typeof error === "object" &&
-      "message" in error &&
-      typeof (error as { message?: unknown }).message === "string"
-    ) {
-      return (error as { message: string }).message;
+    if (typeof error === "string") {
+      return { message: error, code: null, docUrl: null, arxivId: null };
+    }
+    if (error && typeof error === "object") {
+      const object = error as Record<string, unknown>;
+      const stringField = (key: string) =>
+        typeof object[key] === "string" ? (object[key] as string) : null;
+      return {
+        message: stringField("message") ?? "Request failed",
+        code: stringField("code"),
+        docUrl: stringField("docUrl"),
+        arxivId: stringField("arxivId"),
+      };
     }
   }
-  return fallback;
+  return { message: "Request failed", code: null, docUrl: null, arxivId: null };
 }
 
 export default function ReaderView({ source, sourceId, handoffSlug }: Props) {
@@ -42,6 +52,8 @@ export default function ReaderView({ source, sourceId, handoffSlug }: Props) {
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [errorCode, setErrorCode] = useState<string | null>(null);
+  const [errorArxivId, setErrorArxivId] = useState<string | null>(null);
   const [data, setData] = useState<ReaderPayload | null>(null);
   const [handoffExpiresAt, setHandoffExpiresAt] = useState<string | null>(null);
   const [activeParaId, setActiveParaId] = useState<string | null>(null);
@@ -72,7 +84,13 @@ export default function ReaderView({ source, sourceId, handoffSlug }: Props) {
         }
 
         if (!res.ok) {
-          throw new Error(errorMessage(json, `Request failed (${res.status})`));
+          const apiError = readApiError(json);
+          if (!controller.signal.aborted) {
+            setError(apiError.message || `Request failed (${res.status})`);
+            setErrorCode(apiError.code);
+            setErrorArxivId(apiError.arxivId);
+          }
+          return;
         }
         if (controller.signal.aborted) return;
 
@@ -95,6 +113,8 @@ export default function ReaderView({ source, sourceId, handoffSlug }: Props) {
       } catch (err) {
         if (controller.signal.aborted) return;
         setError(err instanceof Error ? err.message : "Network error");
+        setErrorCode(null);
+        setErrorArxivId(null);
         setData(null);
       } finally {
         if (!controller.signal.aborted) setLoading(false);
@@ -174,10 +194,10 @@ export default function ReaderView({ source, sourceId, handoffSlug }: Props) {
             <p className="font-reading text-lg font-semibold text-foreground">
               We couldn&apos;t open this paper.
             </p>
-            {error?.includes("No HTML reader is available") && (
+            {errorCode === "NO_HTML_AVAILABLE" && errorArxivId && (
               <p className="mx-auto mt-3 max-w-md rounded-xl border border-border bg-surface-raised px-4 py-3 text-sm leading-relaxed text-muted">
-                This paper is likely PDF-only. You can still read it with your
-                own model using the OpenCode skill and local MCP.{" "}
+                arXiv:{errorArxivId} appears to be PDF-only. It can still be
+                read with your own model.{" "}
                 <Link
                   href="/docs/pdf-only"
                   className="text-accent underline decoration-accent/40 underline-offset-2 hover:text-accent-strong"
