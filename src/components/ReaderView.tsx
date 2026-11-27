@@ -238,17 +238,28 @@ export default function ReaderView({ source, sourceId, handoffSlug }: Props) {
             ) : (
               errorCode === "NO_HTML_AVAILABLE" &&
               errorArxivId && (
-                <p className="mx-auto mt-3 max-w-md rounded-xl border border-border bg-surface-raised px-4 py-3 text-sm leading-relaxed text-muted">
-                  arXiv:{errorArxivId} appears to be PDF-only. It can still be
-                  read with your own model.{" "}
-                  <Link
-                    href="/docs/pdf-only"
-                    className="text-accent underline decoration-accent/40 underline-offset-2 hover:text-accent-strong"
-                  >
-                    Read the PDF-only guide
-                  </Link>
-                  .
-                </p>
+                <div className="mx-auto mt-3 max-w-md rounded-xl border border-border bg-surface-raised px-4 py-3 text-sm leading-relaxed text-muted">
+                  <p>
+                    arXiv:{errorArxivId} appears to be PDF-only. It can still
+                    be read with your own model.
+                  </p>
+                  <p className="mt-3 flex flex-wrap items-center justify-center gap-3">
+                    <Link
+                      href="/docs/pdf-only"
+                      className="inline-flex items-center rounded-full border border-accent/30 bg-accent px-4 py-2 font-medium text-white transition-colors hover:bg-accent-strong"
+                    >
+                      Read the PDF-only guide
+                    </Link>
+                    <a
+                      href={`https://arxiv.org/pdf/${errorArxivId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-accent underline decoration-accent/40 underline-offset-2 hover:text-accent-strong"
+                    >
+                      Open the original PDF
+                    </a>
+                  </p>
+                </div>
               )
             )}
             <p className="mt-2 text-sm leading-relaxed text-subtle">
