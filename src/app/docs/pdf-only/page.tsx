@@ -153,14 +153,15 @@ cp -R .opencode/skills/paper-reader .opencode/skills/`}</Pre>
 
         <Section title="Publisher token">
           <p>
-            Publishing is disabled until the Paper Reader operator adds your
-            token to the server&apos;s <Code>PUBLISH_TOKENS</Code> setting.
-            There is no self-serve signup in v1. Ask the project owner for a
-            publisher token, then set it as <Code>PAPER_READER_TOKEN</Code> in
-            your shell or <Code>opencode.json</Code> before publishing. If the
-            server returns <Code>503 PUBLISH_DISABLED</Code>, the deployment
-            has no publisher tokens configured; if it returns{" "}
-            <Code>401 UNAUTHORIZED</Code>, check the token in your MCP config.
+            Publishing is currently beta-gated. There is no self-serve signup:
+            the Paper Reader operator adds your token to the server&apos;s
+            settings. Ask the project owner for a publisher token, then set it
+            as <Code>PAPER_READER_TOKEN</Code> in your shell or{" "}
+            <Code>opencode.json</Code> before publishing. If the server returns{" "}
+            <Code>503 PUBLISH_DISABLED</Code>, the deployment has no publisher
+            tokens configured; if it returns <Code>401 UNAUTHORIZED</Code>,
+            check the token in your MCP config. Personal accounts are planned,
+            but you don&apos;t need one for beta publishing.
           </p>
         </Section>
 
