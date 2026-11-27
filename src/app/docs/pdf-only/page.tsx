@@ -70,10 +70,6 @@ export default function PdfOnlyDocsPage() {
             PDF-only papers
           </h1>
           <p className="mt-3 max-w-xl font-reading text-[16px] leading-relaxed text-muted">
-            Some arXiv papers have no HTML or ar5iv version, so Paper Reader
-            can&apos;t build a reading view for them.
-          </p>
-          <p className="mt-3 max-w-xl rounded-xl border border-border bg-surface-raised px-4 py-3 text-[15px] leading-relaxed text-muted">
             Some arXiv papers are PDF-only. Paper Reader can still read them:
             your agent opens the PDF and publishes a short-lived reading link
             using your model.
