@@ -78,27 +78,28 @@ export default function PdfOnlyDocsPage() {
           <p>
             Your agent reads the PDF and sends Paper Reader a JSON payload. The
             server checks it against the arXiv record and returns a private
-            reading link (for example{" "}
-            <Code>/read/arxiv/2512.00010?h=&lt;slug&gt;</Code>) that works for
+            reading link of the form{" "}
+            <Code>/read/arxiv/&lt;your-id&gt;?h=&lt;code&gt;</Code> that works for
             about six hours.
           </p>
           <p>
             The link expires. Save the paper or its arXiv PDF if you need the
-            paper for longer. The deterministic HTML/ar5iv reader is still the
-            preferred path whenever one exists.
+            paper for longer. When an HTML or ar5iv reader exists, use that
+            stable version instead.
           </p>
         </Section>
 
         <Section title="Before you start">
           <List
             items={[
-              <span key="a">OpenCode installed.</span>,
-              <span key="b">A model with usable quota or API access.</span>,
-              <span key="c">
+              <span key="a">Node.js and npm.</span>,
+              <span key="b">OpenCode installed.</span>,
+              <span key="c">A model with usable quota or API access.</span>,
+              <span key="d">
                 A publisher token from the Paper Reader operator (see{" "}
                 <Code>Publisher token</Code> below).
               </span>,
-              <span key="d">
+              <span key="e">
                 Permission for the agent to download the arXiv PDF when it
                 needs it.
               </span>,
@@ -108,19 +109,27 @@ export default function PdfOnlyDocsPage() {
 
         <Section title="Agent-assisted reading (OpenCode)">
           <p>
-            Clone the repository, build the local MCP server, and install the
-            skill:
+            Clone the repository, install dependencies, build the local MCP
+            server, and install the skill:
           </p>
           <Pre>{`git clone https://github.com/lealiaxiong/paper-reader paper-reader
 cd paper-reader
-npm --prefix mcp run build
-mkdir -p .opencode/skills
-cp -R .opencode/skills/paper-reader .opencode/skills/`}</Pre>
+npm --prefix mcp install && npm --prefix mcp run build
+mkdir -p ~/.opencode/skills
+cp -R "$PWD/.opencode/skills/paper-reader" ~/.opencode/skills/`}</Pre>
           <p>
-            Add the block below to your <Code>opencode.json</Code>, keeping any
-            existing keys. Replace the base URL (for example, use your running
-            local server or the deployed Paper Reader URL) and set{" "}
-            <Code>PAPER_READER_TOKEN</Code> to the token from your operator.
+            Before launching OpenCode, set these environment variables in the
+            same terminal. Ask the operator for the deployed{" "}
+            <Code>PAPER_READER_URL</Code>; if you run Paper Reader locally,
+            use <Code>http://localhost:3000</Code>.
+          </p>
+          <Pre>{`export PAPER_READER_TOKEN='your-publisher-token'
+export PAPER_READER_URL='https://your-deployed-paper-reader-url'`}</Pre>
+          <p>
+            Add the block below to the <Code>opencode.json</Code> that OpenCode
+            loads (global config or project root), keeping any existing keys.
+            Use the absolute path to <Code>mcp/dist/server.js</Code> from your
+            cloned checkout.
           </p>
           <Pre>{`{
   "mcp": {
@@ -128,20 +137,25 @@ cp -R .opencode/skills/paper-reader .opencode/skills/`}</Pre>
       "type": "local",
       "command": ["node", "/absolute/path/to/paper-reader/mcp/dist/server.js"],
       "environment": {
-        "PAPER_READER_URL": "http://localhost:3000",
+        "PAPER_READER_URL": "{env:PAPER_READER_URL}",
         "PAPER_READER_TOKEN": "{env:PAPER_READER_TOKEN}"
       }
     }
   }
 }`}</Pre>
           <p>
-            Restart OpenCode, then ask it to read the paper:
+            Restart OpenCode, then use a prompt with your paper&apos;s arXiv ID:
           </p>
-          <Pre>{`Read arXiv 2512.00010 with the paper-reader skill and publish a Paper Reader link.`}</Pre>
+          <Pre>{`Read arXiv <your-id> with the paper-reader skill and publish a Paper Reader link.`}</Pre>
           <p>
-            The skill calls <Code>paper_format</Code>, reads the PDF natively
-            (or rasterizes it locally when needed), calls{" "}
-            <Code>publish_paper</Code>, and returns the short-lived URL.
+            Success looks like a browser URL of the form{" "}
+            <Code>/read/arxiv/&lt;your-id&gt;?h=&lt;code&gt;</Code>. Open it to
+            verify; it expires in about six hours. The skill calls{" "}
+            <Code>paper_format</Code>, reads the PDF natively (or renders pages
+            locally when needed), calls <Code>publish_paper</Code>, and returns
+            the URL. If your agent cannot read the PDF natively, its page
+            renderer uses <Code>pdftoppm</Code>, <Code>mutool</Code>, or{" "}
+            <Code>pdfimages</Code>; install one if that step fails.
           </p>
         </Section>
 
@@ -149,9 +163,9 @@ cp -R .opencode/skills/paper-reader .opencode/skills/`}</Pre>
           <p>
             Publishing is currently beta-gated. There is no self-serve signup:
             the Paper Reader operator adds your token to the server&apos;s
-            settings. Ask the project owner for a publisher token, then set it
-            as <Code>PAPER_READER_TOKEN</Code> in your shell or{" "}
-            <Code>opencode.json</Code> before publishing. If the server returns{" "}
+            settings. Ask the project owner for a publisher token, then export
+            <Code>PAPER_READER_TOKEN</Code> in the terminal that launches
+            OpenCode. If the server returns{" "}
             <Code>503 PUBLISH_DISABLED</Code>, the deployment has no publisher
             tokens configured; if it returns <Code>401 UNAUTHORIZED</Code>,
             check the token in your MCP config. Personal accounts are planned,
@@ -162,9 +176,9 @@ cp -R .opencode/skills/paper-reader .opencode/skills/`}</Pre>
         <Section title="Calling the API yourself">
           <p>
             Engineers can call the API directly. The payload must look like{" "}
-            <Code>paper_format</Code> returns. Successful responses carry{" "}
-            <Code>slug</Code>, <Code>url</Code>, <Code>expiresAt</Code>, and{" "}
-            <Code>deduped</Code>.
+            <Code>paper_format</Code> returns. Successful responses include a
+            short-lived <Code>url</Code> and its expiry time. The long random
+            code in that URL is what makes the link private.
           </p>
           <Pre>{`export PAPER_READER_URL="http://localhost:3000"
 export PAPER_READER_TOKEN="your-publisher-token"
@@ -174,7 +188,7 @@ curl -X POST "$PAPER_READER_URL/api/publish" \\
   -H "content-type: application/json" \\
   --data-binary @payload.json`}</Pre>
           <p>
-            <Code>409 HTML_AVAILABLE</Code> means use the deterministic reader;
+            <Code>409 HTML_AVAILABLE</Code> means use the HTML/ar5iv reader;
             <Code>422</Code> means the metadata or figure source needs fixing;
             <Code>410</Code> means the link expired and the agent should rerun;
             <Code>429</Code> means retry; <Code>503</Code> means metadata or
@@ -184,10 +198,9 @@ curl -X POST "$PAPER_READER_URL/api/publish" \\
 
         <Section title="Privacy and sharing">
           <p>
-            Reading a handoff requires only the slug. Treat the full URL as a
-            password: don&apos;t share it publicly or cite it as a stable
-            source. Handoff pages are not indexed and send no referrer. When an
-            HTML reader appears later, use that stable version.
+            The private link works for anyone who has it. Treat the full URL as
+            a password: don&apos;t share it publicly or cite it as a stable
+            source. When an HTML reader appears later, use that stable version.
           </p>
         </Section>
 
@@ -203,14 +216,15 @@ curl -X POST "$PAPER_READER_URL/api/publish" \\
               <span key="token">
                 <Code>401 UNAUTHORIZED</Code> or{" "}
                 <Code>503 PUBLISH_DISABLED</Code>: verify your publisher token
-                and the deployed <Code>PUBLISH_TOKENS</Code>.
+                and confirm the deployment has publishing enabled.
               </span>,
               <span key="expired">
                 Link expired: re-run the skill to publish a new one.
               </span>,
               <span key="html">
-                <Code>409 HTML_AVAILABLE</Code>: open the normal Paper Reader
-                page for that arXiv ID instead.
+                <Code>409 HTML_AVAILABLE</Code>: open{" "}
+                <Code>/read/arxiv/&lt;your-id&gt;</Code> on the Paper Reader
+                site instead.
               </span>,
             ]}
           />
