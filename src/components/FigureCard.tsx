@@ -12,6 +12,11 @@ type Props = {
   arxivId: string;
   /** True when this figure is linked from the currently visible paragraph */
   active: boolean;
+  /**
+   * Compact height budget for clamping media + caption (mobile drawer).
+   * Undefined on desktop (sidebar scrolls the whole list vertically).
+   */
+  compact?: boolean;
   /** Carousel position info — only set on the carousel's active card */
   carousel?: {
     index: number;
@@ -21,7 +26,7 @@ type Props = {
   };
 };
 
-export default function FigureCard({ figure, active, arxivId, carousel }: Props) {
+export default function FigureCard({ figure, active, arxivId, carousel, compact }: Props) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const clickable = !!figure.imageUrl || !!figure.tableHtml || !!figure.pdfPage;
 
@@ -32,11 +37,11 @@ export default function FigureCard({ figure, active, arxivId, carousel }: Props)
     <img
       src={figure.imageUrl}
       alt={figure.caption || figure.label}
-      className={`max-h-72 w-full object-contain dark:brightness-[0.94] ${clickable ? "pointer-events-none" : ""}`}
+      className={`w-full object-contain dark:brightness-[0.94] ${compact ? "max-h-44" : "max-h-72"} ${clickable ? "pointer-events-none" : ""}`}
       loading="lazy"
     />
   ) : figure.tableHtml ? (
-    <div className="max-h-72 overflow-auto font-reading text-[13px] leading-5 text-media-foreground [&_table]:border-collapse [&_th]:border-b [&_th]:border-media-border [&_th]:px-2 [&_th]:py-1 [&_th]:text-left [&_th]:align-top [&_th]:font-semibold [&_td]:border-b [&_td]:border-media-border/70 [&_td]:px-2 [&_td]:py-1 [&_td]:align-top [&_td]:break-words [&_td]:tabular-nums [&_tr:nth-child(even)]:bg-black/[0.035]">
+    <div className={`${compact ? "max-h-44" : "max-h-72"} overflow-auto font-reading text-[13px] leading-5 text-media-foreground [&_table]:border-collapse [&_th]:border-b [&_th]:border-media-border [&_th]:px-2 [&_th]:py-1 [&_th]:text-left [&_th]:align-top [&_th]:font-semibold [&_td]:border-b [&_td]:border-media-border/70 [&_td]:px-2 [&_td]:py-1 [&_td]:align-top [&_td]:break-words [&_td]:tabular-nums [&_tr:nth-child(even)]:bg-black/[0.035]`}>
       <div dangerouslySetInnerHTML={{ __html: figure.tableHtml }} />
     </div>
   ) : figure.pdfPage ? (
@@ -104,7 +109,12 @@ export default function FigureCard({ figure, active, arxivId, carousel }: Props)
           </div>
         )}
         {figure.caption && (
-          <p className="mt-2.5 font-reading text-[13px] leading-[1.55] text-muted">
+          <p
+            className={`mt-2.5 font-reading text-[13px] leading-[1.55] text-muted ${
+              compact ? "line-clamp-4" : ""
+            }`}
+            title={compact ? figure.caption : undefined}
+          >
             {figure.caption}
           </p>
         )}

@@ -168,18 +168,30 @@ export default function FigureSlot({ data, activeParaId, activeFigureIds }: Prop
               {MUSE_EMBER_NOTE}
             </p>
           )}
+          {/* Height is capped to the viewport so a tall image + long
+              caption can never push the sheet past the screen. Cards
+              scroll internally (vertically) and align to the top so
+              neighbours are never cut off by flex stretch. */}
           <div
             ref={sheetRef}
             onScroll={onScroll}
-            className="flex snap-x snap-mandatory items-stretch justify-center-safe gap-3 overflow-x-auto overscroll-x-contain px-[7vw] pb-3 pt-2"
+            className="flex max-h-[calc(100dvh-8.75rem)] snap-x snap-mandatory items-start justify-center-safe gap-3 overflow-x-auto overscroll-x-contain px-[7vw] pb-3 pt-2"
           >
             {visible.map((f) => (
-              <div key={f.id} className="w-[86vw] max-w-[430px] shrink-0 snap-center">
-                <FigureCard
-                  figure={f}
-                  arxivId={data.sourceId}
-                  active={activeFigureIds.has(f.id)}
-                />
+              <div
+                key={f.id}
+                className="w-[86vw] max-w-[430px] shrink-0 snap-center"
+              >
+                {/* Inner vertical scroll: the strip itself is horizontal-only,
+                    so each card owns its own scroll for tall content. */}
+                <div className="max-h-[calc(100dvh-10.5rem)] overflow-y-auto overscroll-contain">
+                  <FigureCard
+                    figure={f}
+                    arxivId={data.sourceId}
+                    active={activeFigureIds.has(f.id)}
+                    compact
+                  />
+                </div>
               </div>
             ))}
           </div>
