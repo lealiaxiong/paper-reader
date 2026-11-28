@@ -551,8 +551,10 @@ Pre-accounts, BYOM uses a **handoff, not a cache**:
   desired, validated community entries. That is the first point where a shared
   BYOM cache makes sense.
 
-Known v1 trade-off: handoff links expire, so a reader must re-run their agent
-after the TTL. That is the intended price of staying anonymous and cache-free.
+Known v1 trade-off: handoff links expire. The skill should save the extracted
+payload locally (for example, `paper-reader-<arxivId>.json`) so the agent can
+re-publish the saved payload when the link expires instead of re-extracting
+the PDF. That is the intended price of staying anonymous and cache-free.
 
 ## 11. Cross-cutting work
 

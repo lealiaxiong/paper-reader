@@ -31,6 +31,7 @@ Rules:
 - Every figure has either tableHtml or a 1-based pdfPage, optionally a normalized bbox [x, y, width, height] in [0, 1].
 - imageUrl is not accepted in v1.
 - The server recomputes paraFigureMap; include it only to fill gaps.
+- Save the emitted payload locally, such as paper-reader-<arxivId>.json. On expiry, re-send that saved payload instead of extracting the PDF again.
 - A publish is accepted only for PDF-only arXiv papers. If arXiv HTML or ar5iv exists, use the normal reader instead.`;
 
 export const EXAMPLE: Record<string, unknown> = {

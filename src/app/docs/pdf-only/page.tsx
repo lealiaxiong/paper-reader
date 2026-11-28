@@ -87,7 +87,10 @@ export default function PdfOnlyDocsPage() {
             about six hours (the reader shows the exact expiry).
           </p>
           <p>
-            The link expires, so save the paper or its arXiv PDF for longer.
+            The link expires, so save the JSON payload your agent sends and
+            keep the paper or its arXiv PDF for longer. When the link expires,
+            send the saved payload to <Code>publish_paper</Code> again instead
+            of re-reading the PDF.
           </p>
         </Section>
 
@@ -112,7 +115,10 @@ export default function PdfOnlyDocsPage() {
         <Section title="Agent-assisted reading (OpenCode)">
           <p>
             Clone the repository, install dependencies, build the local MCP
-            server, and install the skill:
+            server, and install the skill. Ask your agent to save the JSON
+            payload it emits (for example,{" "}
+            <Code>paper-reader-&lt;your-id&gt;.json</Code>) so it can be
+            re-sent when the link expires:
           </p>
           <Pre>{`git clone https://github.com/lealiaxiong/paper-reader paper-reader
 cd paper-reader
@@ -197,7 +203,8 @@ cp -R "$PWD/.opencode/skills/paper-reader" ~/.opencode/skills/`}</Pre>
                 and confirm the deployment has publishing enabled.
               </span>,
               <span key="expired">
-                Link expired: re-run the skill to publish a new one.
+                Link expired: ask the agent to re-send the saved JSON payload
+                with <Code>publish_paper</Code>.
               </span>,
               <span key="html">
                 <Code>409 HTML_AVAILABLE</Code>: open{" "}
