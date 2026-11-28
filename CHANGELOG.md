@@ -9,6 +9,12 @@ release.
 
 ## [0.3.0] - 2026-11-27
 
+**BYOM = Bring Your Own Model.** Instead of Paper Reader paying for model
+inference on its server, the reader’s own AI agent reads a PDF-only arXiv
+paper with the user’s quota and sends a validated JSON payload to Paper Reader,
+which stores it briefly as an ephemeral handoff and renders it in the
+existing reader.
+
 ### Added
 
 - BYOM figure rendering: a streamed `/api/pdf/arxiv/<id>` proxy feeds PDF.js,
@@ -96,5 +102,6 @@ updated, tests pass, and the production deployment is verified. Each release
 gets an annotated git tag (`vX.Y.Z`) and a GitHub Release with concise release
 notes; the changelog remains the complete record.
 
+[0.3.0]: https://github.com/lealiaxiong/paper-reader/releases/tag/v0.3.0
 [0.2.0]: https://github.com/lealiaxiong/paper-reader/releases/tag/v0.2.0
 [0.1.0]: https://github.com/lealiaxiong/paper-reader/releases/tag/v0.1.0
