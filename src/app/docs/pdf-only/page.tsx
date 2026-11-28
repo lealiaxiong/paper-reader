@@ -161,15 +161,11 @@ export PAPER_READER_URL='https://your-deployed-paper-reader-url'`}</Pre>
 
         <Section title="Publisher token">
           <p>
-            Publishing is currently beta-gated. There is no self-serve signup:
-            the Paper Reader operator adds your token to the server&apos;s
-            settings. Ask the project owner for a publisher token, then export
-            <Code>PAPER_READER_TOKEN</Code> in the terminal that launches
-            OpenCode. If the server returns{" "}
-            <Code>503 PUBLISH_DISABLED</Code>, the deployment has no publisher
-            tokens configured; if it returns <Code>401 UNAUTHORIZED</Code>,
-            check the token in your MCP config. Personal accounts are planned,
-            but you don&apos;t need one for beta publishing.
+            Publishing is beta-gated: ask the project owner for a publisher
+            token and export <Code>PAPER_READER_TOKEN</Code> before launching
+            OpenCode. If you get <Code>503 PUBLISH_DISABLED</Code>, the
+            deployment has publishing disabled; <Code>401 UNAUTHORIZED</Code>{" "}
+            means the token is wrong.
           </p>
         </Section>
 
