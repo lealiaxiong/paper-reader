@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 While the project is in `0.x`, breaking user-facing changes may ship in a minor
 release.
 
+## [0.3.1] - 2026-11-28
+
+### Fixed
+
+- Mobile figure drawer: the bottom sheet is now capped to the viewport,
+  cards are top-aligned with per-card vertical scrolling, and the drawer
+  uses a compact card (smaller media, caption clamped to 4 lines with the
+  full text in the lightbox), so a tall figure or long caption can no
+  longer push the sheet past the screen and hide neighboring figures.
+
 ## [0.3.0] - 2026-11-27
 
 **BYOM = Bring Your Own Model.** Instead of Paper Reader paying for model
@@ -102,6 +112,7 @@ updated, tests pass, and the production deployment is verified. Each release
 gets an annotated git tag (`vX.Y.Z`) and a GitHub Release with concise release
 notes; the changelog remains the complete record.
 
+[0.3.1]: https://github.com/lealiaxiong/paper-reader/releases/tag/v0.3.1
 [0.3.0]: https://github.com/lealiaxiong/paper-reader/releases/tag/v0.3.0
 [0.2.0]: https://github.com/lealiaxiong/paper-reader/releases/tag/v0.2.0
 [0.1.0]: https://github.com/lealiaxiong/paper-reader/releases/tag/v0.1.0
