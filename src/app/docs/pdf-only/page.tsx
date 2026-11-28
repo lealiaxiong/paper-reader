@@ -220,9 +220,18 @@ curl -X POST "$PAPER_READER_URL/api/publish" \\
 
         <Section title="Where to go next">
           <p>
-            Source and setup details live in the <Code>mcp/README.md</Code>{" "}
-            file and the OpenCode skill. The detailed API contract is in{" "}
-            <Code>docs/handoff-api.md</Code>.
+            The MCP server and OpenCode skill ship in the{" "}
+            <a
+              href={REPO_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-accent underline decoration-accent/40 underline-offset-2 hover:text-accent-strong"
+            >
+              Paper Reader repository
+            </a>
+            . API details and setup notes are in the repo&apos;s{" "}
+            <Code>mcp/README.md</Code>, <Code>.opencode/skills/paper-reader/</Code>,
+            and <Code>docs/handoff-api.md</Code>.
           </p>
         </Section>
       </main>
