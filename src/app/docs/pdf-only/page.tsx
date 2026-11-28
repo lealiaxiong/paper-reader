@@ -8,8 +8,6 @@ export const metadata: Metadata = {
     "Read PDF-only arXiv papers in Paper Reader with your own model: OpenCode skill, local MCP server, and manual publishing.",
 };
 
-const REPO_URL = "https://github.com/lealiaxiong/paper-reader";
-
 function Code({ children }: { children: React.ReactNode }) {
   return (
     <code className="whitespace-nowrap rounded bg-surface px-1.5 py-0.5 font-mono text-[0.88em] text-foreground">
@@ -113,7 +111,7 @@ export default function PdfOnlyDocsPage() {
             Clone the repository, build the local MCP server, and install the
             skill:
           </p>
-          <Pre>{`git clone ${REPO_URL} paper-reader
+          <Pre>{`git clone https://github.com/lealiaxiong/paper-reader paper-reader
 cd paper-reader
 npm --prefix mcp run build
 mkdir -p .opencode/skills
@@ -216,23 +214,6 @@ curl -X POST "$PAPER_READER_URL/api/publish" \\
               </span>,
             ]}
           />
-        </Section>
-
-        <Section title="Where to go next">
-          <p>
-            The MCP server and OpenCode skill ship in the{" "}
-            <a
-              href={REPO_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-accent underline decoration-accent/40 underline-offset-2 hover:text-accent-strong"
-            >
-              Paper Reader repository
-            </a>
-            . API details and setup notes are in the repo&apos;s{" "}
-            <Code>mcp/README.md</Code>, <Code>.opencode/skills/paper-reader/</Code>,
-            and <Code>docs/handoff-api.md</Code>.
-          </p>
         </Section>
       </main>
       <SiteFooter />
