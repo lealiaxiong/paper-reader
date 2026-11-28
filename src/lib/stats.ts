@@ -48,3 +48,48 @@ export async function recordError(): Promise<void> {
     console.warn("Stats write failed:", err);
   }
 }
+
+/**
+ * BYOM counters (M9 slice). Cumulative like the cache counters; production-only
+ * via `productionClient()`. Key names are stable because `/api/stats` reads
+ * them by exact key.
+ */
+export async function recordByomPublish(ok: boolean): Promise<void> {
+  const client = productionClient();
+  if (!client) return;
+  try {
+    await client.incr(ok ? "stats:byom:publish:ok" : "stats:byom:publish:fail");
+  } catch (err) {
+    console.warn("Stats write failed:", err);
+  }
+}
+
+export async function recordSanitizeRejection(): Promise<void> {
+  const client = productionClient();
+  if (!client) return;
+  try {
+    await client.incr("stats:byom:sanitize-rejections");
+  } catch (err) {
+    console.warn("Stats write failed:", err);
+  }
+}
+
+export async function recordHandoffHit(): Promise<void> {
+  const client = productionClient();
+  if (!client) return;
+  try {
+    await client.incr("stats:byom:handoff-hits");
+  } catch (err) {
+    console.warn("Stats write failed:", err);
+  }
+}
+
+export async function recordHandoffExpired(): Promise<void> {
+  const client = productionClient();
+  if (!client) return;
+  try {
+    await client.incr("stats:byom:handoff-expired");
+  } catch (err) {
+    console.warn("Stats write failed:", err);
+  }
+}

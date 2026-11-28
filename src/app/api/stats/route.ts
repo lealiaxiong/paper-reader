@@ -46,12 +46,19 @@ export async function GET(req: NextRequest) {
     new Date(Date.now() - i * DAY_MS).toISOString().slice(0, 10),
   );
 
-  const [loads, papers, cacheHits, cacheMisses, errors] = await Promise.all([
+  const [loads, papers, cacheHits, cacheMisses, errors, byom] = await Promise.all([
     redis.mget<(number | null)[]>(...dates.map((d) => `stats:loads:${d}`)),
     redis.hgetall<Record<string, unknown>>("stats:papers"),
     redis.get<number>("stats:cache:hits"),
     redis.get<number>("stats:cache:misses"),
     redis.get<number>("stats:errors"),
+    redis.mget<(number | null)[]>(
+      "stats:byom:publish:ok",
+      "stats:byom:publish:fail",
+      "stats:byom:sanitize-rejections",
+      "stats:byom:handoff-hits",
+      "stats:byom:handoff-expired",
+    ),
   ]);
 
   const loadsByDay = dates.map((date, i) => ({
@@ -82,6 +89,13 @@ export async function GET(req: NextRequest) {
         hitRate: hits + misses > 0 ? hits / (hits + misses) : null,
       },
       errors: Number(errors ?? 0),
+      byom: {
+        publishOk: Number(byom[0] ?? 0),
+        publishFail: Number(byom[1] ?? 0),
+        sanitizeRejections: Number(byom[2] ?? 0),
+        handoffHits: Number(byom[3] ?? 0),
+        handoffExpired: Number(byom[4] ?? 0),
+      },
       topPapers,
     },
     { headers: NO_STORE },

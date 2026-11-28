@@ -175,7 +175,11 @@ export default function FigureSlot({ data, activeParaId, activeFigureIds }: Prop
           >
             {visible.map((f) => (
               <div key={f.id} className="w-[86vw] max-w-[430px] shrink-0 snap-center">
-                <FigureCard figure={f} active={activeFigureIds.has(f.id)} />
+                <FigureCard
+                  figure={f}
+                  arxivId={data.sourceId}
+                  active={activeFigureIds.has(f.id)}
+                />
               </div>
             ))}
           </div>

@@ -5,7 +5,9 @@ const isDev = process.env.NODE_ENV === "development";
 const csp = [
   "default-src 'self'",
   // Next.js needs inline bootstrap scripts; dev additionally needs eval for HMR.
-  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
+  // wasm-unsafe-eval lets PDF.js use its WASM decoders in production.
+  `script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'${isDev ? " 'unsafe-eval'" : ""}`,
+  "worker-src 'self' blob:",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: https://arxiv.org https://ar5iv.arxiv.org https://ar5iv.labs.arxiv.org",
   "font-src 'self' data:",

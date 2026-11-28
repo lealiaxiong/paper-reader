@@ -115,9 +115,9 @@ export default function ReaderView({ source, sourceId, handoffSlug }: Props) {
 
         if (handoffSlug) {
           if (payload.arxivId !== sourceId) {
-            throw new Error("This handoff is for a different paper.");
+            throw new Error("This reading link is for a different paper.");
           }
-          if (!payload.data) throw new Error("The handoff is empty.");
+          if (!payload.data) throw new Error("This reading link has no content yet.");
           setHandoffExpiresAt(payload.expiresAt ?? null);
           setHandoffCreatedAt(payload.createdAt ?? null);
           setHandoffClient(payload.client ?? null);
@@ -211,23 +211,23 @@ export default function ReaderView({ source, sourceId, handoffSlug }: Props) {
             <p className="font-reading text-lg font-semibold text-foreground">
               {handoffSlug
                 ? showExpired
-                  ? "This handoff link has expired."
-                  : "We couldn't open this handoff."
+                  ? "This reading link has expired."
+                  : "We couldn't open this reading link."
                 : "We couldn't open this paper."}
             </p>
             {handoffSlug ? (
               <div className="mx-auto mt-3 max-w-md rounded-xl border border-border bg-surface-raised px-4 py-3 text-sm leading-relaxed text-muted">
                 <p>
                   {showExpired
-                    ? `BYOM links are private and short-lived. Re-run your agent to publish a new one for arXiv:${sourceId}.`
-                    : error ?? "Something went wrong while opening this handoff."}
+                    ? `This was a private link to a PDF-only paper, read by someone's own AI model instead of Paper Reader's server. It expires after a few hours. To read the paper again, follow the guide to set up your own agent and create a fresh link.`
+                    : error ?? "Something went wrong while opening this reading link."}
                 </p>
                 <p className="mt-3 flex flex-wrap items-center justify-center gap-3">
                   <Link
                     href="/docs/pdf-only"
                     className="inline-flex items-center rounded-full border border-accent/30 bg-accent px-4 py-2 font-medium text-white transition-colors hover:bg-accent-strong"
                   >
-                    Publish a new link
+                    See how to create a new link
                   </Link>
                   <a
                     href={`https://arxiv.org/pdf/${sourceId}`}

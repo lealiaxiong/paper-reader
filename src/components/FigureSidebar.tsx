@@ -141,6 +141,7 @@ export default function FigureSidebar({ data, activeParaId, activeFigureIds }: P
             <FigureCard
               key={f.id}
               figure={f}
+              arxivId={data.sourceId}
               active={activeFigureIds.has(f.id)}
               carousel={
                 currentCarouselFigure?.id === f.id && carouselTotal > 1

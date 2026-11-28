@@ -2,10 +2,13 @@
 
 import { useCallback, useEffect, useRef } from "react";
 import type { Figure } from "@/lib/types";
+import FigureCrop from "./FigureCrop";
 import FigureExplanation, { MUSE_EMBER_NOTE } from "./FigureExplanation";
 
 type Props = {
   figure: Figure | null;
+  /** Source paper id, used to stream the PDF for BYOM crops. */
+  arxivId: string;
   onClose: () => void;
 };
 
@@ -20,7 +23,7 @@ type Props = {
  * overlay under ancestors).
  */
 import { createPortal } from "react-dom";
-export default function FigureLightbox({ figure, onClose }: Props) {
+export default function FigureLightbox({ figure, arxivId, onClose }: Props) {
   const closeRef = useRef<HTMLButtonElement>(null);
 
   const handleKey = useCallback(
@@ -80,9 +83,19 @@ export default function FigureLightbox({ figure, onClose }: Props) {
           </div>
         ) : figure.tableHtml ? (
           <div
-            className="max-h-[68vh] overflow-auto rounded-lg border border-media-border bg-media p-3 font-reading text-sm leading-6 text-media-foreground [&_table]:border-collapse [&_th]:border-b [&_th]:border-media-border [&_th]:px-2 [&_th]:py-1 [&_th]:text-left [&_th]:align-top [&_th]:font-semibold [&_td]:border-b [&_td]:border-media-border/70 [&_td]:px-2 [&_td]:py-1 [&_td]:align-top [&_td]:tabular-nums [&_tr:nth-child(even)]:bg-black/[0.035]"
+            className="max-h-[68vh] overflow-auto rounded-lg border border-media-border bg-media p-3 font-reading text-sm leading-6 text-media-foreground [&_table]:border-collapse [&_th]:border-b [&_th]:border-media-border [&_th]:px-2 [&_th]:py-1 [&_th]:text-left [&_th]:align-top [&_th]:font-semibold [&_td]:border-b [&_td]:border-media-border/70 [&_td]:px-2 [&_td]:py-1 [&_td]:align-top [&_td]:break-words [&_td]:tabular-nums [&_tr:nth-child(even)]:bg-black/[0.035]"
             dangerouslySetInnerHTML={{ __html: figure.tableHtml }}
           />
+        ) : figure.pdfPage ? (
+          <div className="rounded-lg border border-media-border bg-media p-3">
+            <FigureCrop
+              arxivId={arxivId}
+              pdfPage={figure.pdfPage}
+              bbox={figure.bbox}
+              label={figure.caption || figure.label}
+              detail
+            />
+          </div>
         ) : (
           <p className="font-sans text-sm text-subtle">No image available</p>
         )}

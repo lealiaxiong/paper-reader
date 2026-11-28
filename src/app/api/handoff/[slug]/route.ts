@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { HandoffStorageError, deleteHandoff, getHandoff, SLUG_PATTERN } from "@/lib/handoff";
 import { apiError } from "@/lib/http";
 import { authenticatePublisher, isAdminRequest } from "@/lib/publish-auth";
+import { recordHandoffExpired, recordHandoffHit } from "@/lib/stats";
 
 
 type RouteContext = {
@@ -46,6 +47,7 @@ export async function GET(
   }
 
   if (!record) {
+    await recordHandoffExpired();
     return apiError(
       410,
       "HANDOFF_EXPIRED",
@@ -55,6 +57,7 @@ export async function GET(
     );
   }
 
+  await recordHandoffHit();
   return NextResponse.json(
     {
       data: record.payload,

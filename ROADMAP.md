@@ -236,8 +236,10 @@ version, and is a third-party dependency with its own rate limits.
 **Status:** Server foundation implemented: shared BYOM types, publisher auth,
 ephemeral TTL store with publisher-scoped dedupe, payload validation and
 sanitization, arXiv metadata cross-check, HTML-availability refusal, publish/
-handoff/delete routes, and `?h=` rendering with a provenance badge. Pending:
-figure crops from the streamed PDF (M5) and the explanations overlay (M4).
+handoff/delete routes, and `?h=` rendering with a provenance badge. Figure
+crops from the streamed PDF (M5 slice) are shipped via `/api/pdf/arxiv/<id>`
+plus PDF.js; the full PDF pane and the explanations overlay (M4) remain
+pending.
 
 **Goal:** Accept a model-produced payload safely and deliver it through an
 ephemeral handoff without touching the deterministic path.
@@ -281,11 +283,11 @@ server; handoff links leaking or expiring mid-read.
 
 ### M3 — OpenCode skill plus local MCP
 
-**Status:** Partial: `paper-reader-mcp` stdio service with `paper_format` and
+**Status:** `paper-reader-mcp` stdio service with `paper_format` and
 `publish_paper`, the OpenCode skill, and rasterization helper are shipped.
 `publish_explanations` remains a documented placeholder until the server
-overlay endpoint exists; `pdfPage`/`bbox` figures carry captions until the
-M5 renderer lands.
+overlay endpoint exists; `pdfPage`/`bbox` figures now render their crops from
+the streamed PDF (full-page fallback when the box is missing or invalid).
 
 **Goal:** A developer can point OpenCode at a PDF-only arXiv paper and get a
 working reader URL, with no account.

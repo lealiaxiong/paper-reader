@@ -24,6 +24,7 @@ import {
 } from "@/lib/publish-auth";
 import { clientIp, publishLimiter } from "@/lib/ratelimit";
 import { sourcePath } from "@/lib/sources";
+import { recordByomPublish, recordSanitizeRejection } from "@/lib/stats";
 
 export const maxDuration = 30;
 
@@ -48,6 +49,7 @@ export async function POST(req: NextRequest) {
         `${auth.publisherId}:${clientIp(req)}`,
       );
       if (!success) {
+        await recordByomPublish(false);
         return apiError(
           429,
           "RATE_LIMITED",
@@ -68,6 +70,7 @@ export async function POST(req: NextRequest) {
 
   const declaredLength = Number(req.headers.get("content-length") ?? "0");
   if (Number.isFinite(declaredLength) && declaredLength > MAX_PAYLOAD_BYTES) {
+    await recordByomPublish(false);
     return apiError(413, "PAYLOAD_TOO_LARGE", "The payload is too large.");
   }
 
@@ -75,9 +78,11 @@ export async function POST(req: NextRequest) {
   try {
     raw = await req.text();
   } catch {
+    await recordByomPublish(false);
     return apiError(400, "INVALID_JSON", "The request body could not be read.");
   }
   if (Buffer.byteLength(raw) > MAX_PAYLOAD_BYTES) {
+    await recordByomPublish(false);
     return apiError(413, "PAYLOAD_TOO_LARGE", "The payload is too large.");
   }
 
@@ -85,6 +90,7 @@ export async function POST(req: NextRequest) {
   try {
     body = JSON.parse(raw);
   } catch {
+    await recordByomPublish(false);
     return apiError(400, "INVALID_JSON", "The request body is not valid JSON.");
   }
 
@@ -93,14 +99,18 @@ export async function POST(req: NextRequest) {
     built = buildHandoffPayload(body);
   } catch (err) {
     if (err instanceof PublishPayloadError) {
+      await recordByomPublish(false);
+      await recordSanitizeRejection();
       return apiError(err.status, err.code, err.message, err.details);
     }
     console.error("Unexpected publish validation failure:", err);
+    await recordByomPublish(false);
     return apiError(400, "INVALID_SCHEMA", "The payload could not be validated.");
   }
 
   const probe = await probePaperHtml(built.arxivId);
   if (probe.available) {
+    await recordByomPublish(false);
     return apiError(
       409,
       "HTML_AVAILABLE",
@@ -117,6 +127,7 @@ export async function POST(req: NextRequest) {
     metadata = await fetchArxivMetadata(built.arxivId);
   } catch (err) {
     if (err instanceof ArxivMetadataUnavailableError) {
+      await recordByomPublish(false);
       return apiError(
         503,
         "METADATA_UNAVAILABLE",
@@ -127,6 +138,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (!metadata) {
+    await recordByomPublish(false);
     return apiError(
       422,
       "ARXIV_METADATA_MISMATCH",
@@ -139,6 +151,7 @@ export async function POST(req: NextRequest) {
     metadata,
   );
   if (!match.ok) {
+    await recordByomPublish(false);
     return apiError(
       422,
       "ARXIV_METADATA_MISMATCH",
@@ -163,6 +176,7 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     if (err instanceof HandoffStorageError) {
       console.error("Handoff storage failure:", err);
+      await recordByomPublish(false);
       return apiError(
         503,
         "STORAGE_UNAVAILABLE",
@@ -172,6 +186,7 @@ export async function POST(req: NextRequest) {
     throw err;
   }
 
+  await recordByomPublish(true);
   return NextResponse.json(
     {
       slug: result.record.slug,

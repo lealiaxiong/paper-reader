@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 While the project is in `0.x`, breaking user-facing changes may ship in a minor
 release.
 
+## [0.3.0] - 2026-11-27
+
+### Added
+
+- BYOM figure rendering: a streamed `/api/pdf/arxiv/<id>` proxy feeds PDF.js,
+  which crops `pdfPage`/`bbox` figures from the public arXiv PDF client-side
+  (full-page fallback when the box is missing or invalid). No PDF bytes are
+  stored.
+- BYOM observability: publish success/failure, sanitization rejection, and
+  handoff hit/expiry counters are recorded on production and exposed through
+  `/api/stats` as `byom`.
+- Public `/docs/pdf-only` guide with the hosted deployment URL, prerequisites,
+  the OpenCode skill/MCP setup, and appendices for the API and running locally.
+
+### Changed
+
+- The content security policy now allows the PDF.js worker (`worker-src`) and
+  WASM decoders (`wasm-unsafe-eval`) needed for in-browser PDF rendering.
+- Publishing is beta-gated by operator-issued `PUBLISH_TOKENS`; there is no
+  self-serve signup in this version.
+
 ## [0.2.0] - 2026-11-21
 
 ### Added
