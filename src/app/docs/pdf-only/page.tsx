@@ -119,12 +119,12 @@ mkdir -p ~/.opencode/skills
 cp -R "$PWD/.opencode/skills/paper-reader" ~/.opencode/skills/`}</Pre>
           <p>
             Before launching OpenCode, set these environment variables in the
-            same terminal. Ask the operator for the deployed{" "}
-            <Code>PAPER_READER_URL</Code>; if you run Paper Reader locally,
-            use <Code>http://localhost:3000</Code>.
+            same terminal. Ask the operator which deployed Paper Reader URL to
+            use; if you run Paper Reader locally, use{" "}
+            <Code>http://localhost:3000</Code>.
           </p>
           <Pre>{`export PAPER_READER_TOKEN='your-publisher-token'
-export PAPER_READER_URL='https://your-deployed-paper-reader-url'`}</Pre>
+export PAPER_READER_URL='https://your-paper-reader-deployment-url'`}</Pre>
           <p>
             Add the block below to the <Code>opencode.json</Code> that OpenCode
             loads (global config or project root), keeping any existing keys.
