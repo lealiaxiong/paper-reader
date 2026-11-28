@@ -317,6 +317,48 @@ from the streamed PDF and with provenance. No server-side PDF parsing is involve
 **Risks:** Provider-specific PDF handling; poppler availability across OSes;
 bbox accuracy; users expecting a web upload instead of a CLI flow.
 
+### M3x — BYOM citation parity (follow-up)
+
+**Status:** **Not yet specced.** No implementation has been started; this
+item records the requested follow-up only.
+
+**Goal:** Citation parity between BYOM and deterministic HTML papers: BYOM
+reader pages include the bibliography/citation experience currently produced
+for HTML papers.
+
+**Tasks:**
+
+- Define how the skill extracts citations and bibliography entries from PDFs.
+- Extend the MCP contract and payload schema so citations can travel from the
+  skill to the publish endpoint.
+- Extend server validation/sanitization and the BYOM rendering path so the
+  reader can display citations and bibliography links.
+- Keep deterministic HTML/ar5iv extraction and its resolved citation links
+  unchanged.
+
+**Acceptance criteria:**
+
+- A PDF-only paper published through the skill shows citation-related content
+  with parity to the HTML reader.
+- Bibliography/citation links are validated and sanitized like other BYOM
+  fields.
+- Missing citations degrade gracefully without blocking reading.
+
+**Likely files (at implementation time):** `src/lib/types.ts`,
+`src/lib/handoff-payload.ts`, `mcp/src/publish.ts`,
+`.opencode/skills/paper-reader/SKILL.md`, and reader rendering components.
+
+**Risks:** Citation extraction quality varies across PDF styles; duplicate or
+incomplete references; schema drift between the skill, MCP, and server.
+
+**Open questions:**
+
+- Which citation fields and link targets are required for parity?
+- Whether citations travel as first-class payload fields or embedded in
+  paragraph HTML.
+- Whether the reader should show a bibliography section, citation tooltips,
+  or both.
+
 ### M4 — BYOM explanations
 
 **Goal:** Replace the deploy owner's OpenRouter bill with the user's own quota,
@@ -575,6 +617,7 @@ attribution.
 ## 14. Success metrics
 
 - PDF-only coverage via BYOM: share of previously failing papers that now open.
+- BYOM citation parity: share of published PDF-only papers whose inline citations/bibliography match the deterministic reader’s coverage.
 - BYOM publish success rate and sanitize rejection rate.
 - Traffic split: deterministic (arXiv HTML/ar5iv) vs BYOM vs server PDF.
 - Explanations supplied by users vs served through OpenRouter.
