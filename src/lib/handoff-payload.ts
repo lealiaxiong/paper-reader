@@ -58,7 +58,7 @@ const FigureSchema = z
     caption: z.string().min(1).max(5_000),
     imageUrl: z.unknown().optional(),
     tableHtml: z.string().max(200_000).nullable().optional(),
-    explanation: z.string().max(2_000).optional(),
+    explanation: z.string().max(500).optional(),
     pdfPage: z.number().int().min(1).max(MAX_PDF_PAGE).optional(),
     bbox: BboxSchema.optional(),
   })
@@ -146,18 +146,28 @@ function sanitizeFigure(input: PublishInput["figures"][number]): Figure {
     );
   }
 
+  const label = plainText(input.label);
+  const caption = plainText(input.caption);
+  if (!label || !caption) {
+    throw new PublishPayloadError(
+      "INVALID_SCHEMA",
+      400,
+      `Figure ${input.id} label/caption must contain visible text.`,
+    );
+  }
+
   const figure: Figure = {
     id: input.id,
-    label: plainText(input.label),
+    label,
     number: input.number,
     kind: input.kind,
-    caption: plainText(input.caption),
+    caption,
     imageUrl: null,
     tableHtml,
   };
 
   if (input.explanation) {
-    figure.explanation = plainText(input.explanation).slice(0, 500);
+    figure.explanation = plainText(input.explanation);
   }
   if (input.pdfPage !== undefined) figure.pdfPage = input.pdfPage;
   if (input.bbox) figure.bbox = input.bbox;
@@ -237,10 +247,19 @@ export function buildHandoffPayload(body: unknown): BuiltHandoff {
   );
   const regexMap = buildRegexFigureMap(paragraphs, figures);
 
+  const title = plainText(input.title);
+  if (!title) {
+    throw new PublishPayloadError(
+      "INVALID_SCHEMA",
+      400,
+      "The title must contain visible text.",
+    );
+  }
+
   const readerData = {
     source: "arxiv" as const,
     sourceId: input.arxivId,
-    title: plainText(input.title),
+    title,
     authors: input.authors.map(plainText).filter(Boolean),
     paragraphs,
     figures,

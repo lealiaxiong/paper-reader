@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import SiteFooter from "@/components/SiteFooter";
+import ThemeToggle from "@/components/ThemeToggle";
 
 export const metadata: Metadata = {
   title: "PDF-only papers · Paper Reader",
@@ -58,12 +59,15 @@ export default function PdfOnlyDocsPage() {
     <div className="flex min-h-dvh flex-col">
       <main className="mx-auto w-full max-w-[760px] px-4 pb-16 pt-10 sm:px-6 sm:pt-14">
         <header className="border-b border-border pb-8">
-          <Link
-            href="/"
-            className="font-sans text-xs font-medium text-subtle transition-colors hover:text-foreground"
-          >
-            ← Paper Reader
-          </Link>
+          <div className="flex items-center justify-between">
+            <Link
+              href="/"
+              className="font-sans text-xs font-medium text-subtle transition-colors hover:text-foreground"
+            >
+              ← Paper Reader
+            </Link>
+            <ThemeToggle />
+          </div>
           <h1 className="mt-5 font-reading text-4xl font-semibold tracking-tight text-foreground">
             PDF-only papers
           </h1>
@@ -76,16 +80,14 @@ export default function PdfOnlyDocsPage() {
 
         <Section title="What you get">
           <p>
-            Your agent reads the PDF and sends Paper Reader a JSON payload. The
-            server checks it against the arXiv record and returns a private
-            reading link of the form{" "}
-            <Code>/read/arxiv/&lt;your-id&gt;?h=&lt;code&gt;</Code> that works for
-            about six hours.
+            You give the agent an arXiv ID; it reads the PDF and sends Paper
+            Reader a validated payload. Paper Reader checks it against the
+            arXiv record and returns a private reading link —{" "}
+            <Code>/read/arxiv/&lt;your-id&gt;?h=&lt;code&gt;</Code> — that lasts
+            about six hours (the reader shows the exact expiry).
           </p>
           <p>
-            The link expires. Save the paper or its arXiv PDF if you need the
-            paper for longer. When an HTML or ar5iv reader exists, use that
-            stable version instead.
+            The link expires, so save the paper or its arXiv PDF for longer.
           </p>
         </Section>
 
@@ -118,13 +120,16 @@ npm --prefix mcp install && npm --prefix mcp run build
 mkdir -p ~/.opencode/skills
 cp -R "$PWD/.opencode/skills/paper-reader" ~/.opencode/skills/`}</Pre>
           <p>
-            Before launching OpenCode, set these environment variables in the
-            same terminal. Ask the operator which deployed Paper Reader URL to
-            use; if you run Paper Reader locally, use{" "}
-            <Code>http://localhost:3000</Code>.
+            The hosted Paper Reader deployment is{" "}
+            <a
+              href="https://paper-reader-omega.vercel.app"
+              className="text-accent underline decoration-accent/40 underline-offset-2 hover:text-accent-strong"
+            >
+              paper-reader-omega.vercel.app
+            </a>
+            . Export your publisher token before launching OpenCode:
           </p>
-          <Pre>{`export PAPER_READER_TOKEN='your-publisher-token'
-export PAPER_READER_URL='https://your-paper-reader-deployment-url'`}</Pre>
+          <Pre>{`export PAPER_READER_TOKEN='your-publisher-token'`}</Pre>
           <p>
             Add the block below to the <Code>opencode.json</Code> that OpenCode
             loads (global config or project root), keeping any existing keys.
@@ -137,7 +142,7 @@ export PAPER_READER_URL='https://your-paper-reader-deployment-url'`}</Pre>
       "type": "local",
       "command": ["node", "/absolute/path/to/paper-reader/mcp/dist/server.js"],
       "environment": {
-        "PAPER_READER_URL": "{env:PAPER_READER_URL}",
+        "PAPER_READER_URL": "https://paper-reader-omega.vercel.app",
         "PAPER_READER_TOKEN": "{env:PAPER_READER_TOKEN}"
       }
     }
@@ -166,29 +171,6 @@ export PAPER_READER_URL='https://your-paper-reader-deployment-url'`}</Pre>
             OpenCode. If you get <Code>503 PUBLISH_DISABLED</Code>, the
             deployment has publishing disabled; <Code>401 UNAUTHORIZED</Code>{" "}
             means the token is wrong.
-          </p>
-        </Section>
-
-        <Section title="Calling the API yourself">
-          <p>
-            Engineers can call the API directly. The payload must look like{" "}
-            <Code>paper_format</Code> returns. Successful responses include a
-            short-lived <Code>url</Code> and its expiry time. The long random
-            code in that URL is what makes the link private.
-          </p>
-          <Pre>{`export PAPER_READER_URL="http://localhost:3000"
-export PAPER_READER_TOKEN="your-publisher-token"
-
-curl -X POST "$PAPER_READER_URL/api/publish" \\
-  -H "authorization: Bearer $PAPER_READER_TOKEN" \\
-  -H "content-type: application/json" \\
-  --data-binary @payload.json`}</Pre>
-          <p>
-            <Code>409 HTML_AVAILABLE</Code> means use the HTML/ar5iv reader;
-            <Code>422</Code> means the metadata or figure source needs fixing;
-            <Code>410</Code> means the link expired and the agent should rerun;
-            <Code>429</Code> means retry; <Code>503</Code> means metadata or
-            publishing is temporarily unavailable or disabled.
           </p>
         </Section>
 
@@ -224,6 +206,47 @@ curl -X POST "$PAPER_READER_URL/api/publish" \\
               </span>,
             ]}
           />
+        </Section>
+
+        <Section title="Appendix: calling the API">
+          <p>
+            Engineers can call the API directly. The payload must look like{" "}
+            <Code>paper_format</Code> returns. Successful responses include a
+            short-lived <Code>url</Code> and its expiry time. The long random
+            code in that URL is what makes the link private.
+          </p>
+          <Pre>{`export PAPER_READER_URL="https://paper-reader-omega.vercel.app"
+export PAPER_READER_TOKEN="your-publisher-token"
+
+curl -X POST "$PAPER_READER_URL/api/publish" \\
+  -H "authorization: Bearer $PAPER_READER_TOKEN" \\
+  -H "content-type: application/json" \\
+  --data-binary @payload.json`}</Pre>
+          <p>
+            <Code>409 HTML_AVAILABLE</Code> means use the HTML/ar5iv reader;
+            <Code>422</Code> means the metadata or figure source needs fixing;
+            <Code>410</Code> means the link expired and the agent should rerun;
+            <Code>429</Code> means retry; <Code>503</Code> means metadata or
+            publishing is temporarily unavailable or disabled.
+          </p>
+        </Section>
+
+        <Section title="Appendix: running locally">
+          <p>
+            Most readers should use the hosted deployment above. For local
+            development, run the app with publishing enabled:
+          </p>
+          <Pre>{`git clone https://github.com/lealiaxiong/paper-reader paper-reader
+cd paper-reader
+npm install
+PUBLISH_TOKENS='your-publisher-token' npm run dev`}</Pre>
+          <p>
+            Then set <Code>PAPER_READER_URL</Code> to{" "}
+            <Code>http://localhost:3000</Code> in the MCP config and use the
+            same token as <Code>PAPER_READER_TOKEN</Code>. The local server only
+            enables publishing when <Code>PUBLISH_TOKENS</Code> is set. Build
+            the MCP server as shown above.
+          </p>
         </Section>
       </main>
       <SiteFooter />

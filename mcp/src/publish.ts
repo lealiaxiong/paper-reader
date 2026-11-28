@@ -107,7 +107,7 @@ export const SCHEMA: Record<string, unknown> = {
           kind: { enum: ["figure", "table"] },
           caption: { type: "string", minLength: 1, maxLength: 5000 },
           tableHtml: { type: ["string", "null"], maxLength: 200000 },
-          explanation: { type: "string", maxLength: 2000 },
+          explanation: { type: "string", maxLength: 500 },
           pdfPage: { type: "integer", minimum: 1, maximum: 200 },
           bbox: {
             type: "array",
@@ -116,6 +116,12 @@ export const SCHEMA: Record<string, unknown> = {
             maxItems: 4,
           },
         },
+        allOf: [
+          {
+            if: { required: ["bbox"] },
+            then: { required: ["pdfPage"] },
+          },
+        ],
       },
     },
     paraFigureMap: {

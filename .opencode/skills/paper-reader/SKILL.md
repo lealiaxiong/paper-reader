@@ -33,8 +33,10 @@ Use the `read` tool with the user's PDF path. Ask for vision when the attached p
 When native PDF reading is unavailable, run:
 
 ```sh
-node scripts/crop-figures.mjs <paper.pdf> <output-dir>
+node ~/.opencode/skills/paper-reader/scripts/crop-figures.mjs <paper.pdf> <output-dir>
 ```
+
+If you installed the skill somewhere else, use that directory instead.
 
 The script tries `pdftoppm`, then `mutool`, then `pdfimages`. It writes one PNG per page and a JSON manifest with normalized page rectangles. Read those PNGs with `read`, then publish page/bbox data. Rasters never leave the machine.
 

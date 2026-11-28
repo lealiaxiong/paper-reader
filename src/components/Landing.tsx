@@ -1,8 +1,8 @@
+import Link from "next/link";
+
 type Props = {
   onExample: (url: string) => void;
 };
-
-import Link from "next/link";
 
 const EXAMPLES = [
   { title: "Attention Is All You Need", id: "1706.03762" },

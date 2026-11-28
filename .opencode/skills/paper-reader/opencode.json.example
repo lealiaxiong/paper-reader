@@ -3,9 +3,9 @@
   "mcp": {
     "paper-reader": {
       "type": "local",
-      "command": ["npx", "-y", "paper-reader-mcp"],
+      "command": ["node", "/absolute/path/to/paper-reader/mcp/dist/server.js"],
       "environment": {
-        "PAPER_READER_URL": "https://paper-reader.example",
+        "PAPER_READER_URL": "https://paper-reader-omega.vercel.app",
         "PAPER_READER_TOKEN": "{env:PAPER_READER_TOKEN}"
       }
     }

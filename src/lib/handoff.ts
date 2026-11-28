@@ -46,6 +46,9 @@ export class HandoffStorageError extends Error {}
 const memory = new Map<string, HandoffRecord>();
 const memoryDedupe = new Map<string, string>();
 
+/** Serializes concurrent creates for the same dedupe key within one instance. */
+const inFlight = new Map<string, Promise<CreateHandoffResult>>();
+
 function recordKey(slug: string): string {
   return `handoff:${HANDOFF_VERSION}:${slug}`;
 }
@@ -141,6 +144,25 @@ export async function createHandoff(
   input: CreateHandoffInput,
 ): Promise<CreateHandoffResult> {
   const hash = contentHash(input.payload);
+  const key = dedupeKey(input.publisherId, input.arxivId, hash);
+
+  const pending = inFlight.get(key);
+  if (pending) return pending;
+
+  const promise = createHandoffOnce(input, hash, key);
+  inFlight.set(key, promise);
+  try {
+    return await promise;
+  } finally {
+    inFlight.delete(key);
+  }
+}
+
+async function createHandoffOnce(
+  input: CreateHandoffInput,
+  hash: string,
+  key: string,
+): Promise<CreateHandoffResult> {
   const existing = await findDeduped(
     input.publisherId,
     input.arxivId,
@@ -166,17 +188,37 @@ export async function createHandoff(
 
   if (!redis) {
     memory.set(slug, record);
-    memoryDedupe.set(dedupeKeyOf(record), slug);
+    memoryDedupe.set(key, slug);
     return { record, deduped: false };
   }
 
   try {
     await redis.set(recordKey(slug), record, { ex: ttl });
-    await redis.set(dedupeKeyOf(record), slug, { ex: ttl });
+
+    const claimed = await redis.set(key, slug, { nx: true, ex: ttl });
+    if (claimed !== null) {
+      return { record, deduped: false };
+    }
+
+    const winnerSlug = await redis.get<string>(key);
+    const winner = winnerSlug
+      ? await redis.get<HandoffRecord>(recordKey(winnerSlug))
+      : null;
+    await redis.del(recordKey(slug));
+    if (winner) return { record: winner, deduped: true };
+
+    await redis.del(key);
+    const retried = await redis.set(key, slug, { nx: true, ex: ttl });
+    if (retried !== null) {
+      await redis.set(recordKey(slug), record, { ex: ttl });
+      return { record, deduped: false };
+    }
+
+    throw new HandoffStorageError("Handoff dedupe claim failed");
   } catch (err) {
+    if (err instanceof HandoffStorageError) throw err;
     throw new HandoffStorageError("Handoff write failed", { cause: err });
   }
-  return { record, deduped: false };
 }
 
 export async function getHandoff(

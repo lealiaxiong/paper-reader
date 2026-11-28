@@ -174,7 +174,8 @@ export default function ReaderView({ source, sourceId, handoffSlug }: Props) {
   );
 
   if (!data) {
-    const showExpired = Boolean(handoffSlug) && !loading;
+    const showExpired =
+      Boolean(handoffSlug) && !loading && errorCode === "HANDOFF_EXPIRED";
     return (
       <div className="min-h-full">
         <HomeHeader
@@ -184,7 +185,7 @@ export default function ReaderView({ source, sourceId, handoffSlug }: Props) {
             openPaper();
           }}
           loading={loading}
-          error={showExpired ? null : error}
+          error={handoffSlug ? null : error}
           onHome={goHome}
         />
         {loading ? (
@@ -209,14 +210,17 @@ export default function ReaderView({ source, sourceId, handoffSlug }: Props) {
           <div className="mx-auto max-w-[650px] px-4 py-24 text-center">
             <p className="font-reading text-lg font-semibold text-foreground">
               {handoffSlug
-                ? "This handoff link has expired."
+                ? showExpired
+                  ? "This handoff link has expired."
+                  : "We couldn't open this handoff."
                 : "We couldn't open this paper."}
             </p>
             {handoffSlug ? (
               <div className="mx-auto mt-3 max-w-md rounded-xl border border-border bg-surface-raised px-4 py-3 text-sm leading-relaxed text-muted">
                 <p>
-                  BYOM links are private and short-lived. Re-run your agent to
-                  publish a new one for arXiv:{sourceId}.
+                  {showExpired
+                    ? `BYOM links are private and short-lived. Re-run your agent to publish a new one for arXiv:${sourceId}.`
+                    : error ?? "Something went wrong while opening this handoff."}
                 </p>
                 <p className="mt-3 flex flex-wrap items-center justify-center gap-3">
                   <Link
